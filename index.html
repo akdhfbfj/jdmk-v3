@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V7.5 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V7.6 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -54,30 +54,26 @@
         .sidebar-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-        .day-sat { color: #2563eb; }
-        .day-sun { color: #dc2626; }
-        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .btn-press:active { transform: scale(0.96); }
         .period-badge { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; background: #334155; color: white; border-radius: 50%; font-size: 0.7rem; font-weight: 900; }
         .conflict-glow { box-shadow: 0 0 15px rgba(225, 29, 72, 0.2); border-color: #fb7185 !important; }
         .daily-period-label { font-size: 0.85rem; font-weight: 900; color: #64748b; margin-right: 4px; }
         
-        /* Excel Table Styles */
         .excel-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .excel-table th { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px; font-weight: 900; color: #475569; text-align: center; }
         .excel-table td { border: 1px solid #e2e8f0; padding: 8px; color: #1e293b; background: white; text-align: center; }
         .excel-table tr:nth-child(even) td { background: #f8fafc; }
         .search-input:focus { ring: 2px; ring-color: #4f46e5; outline: none; }
+
+        /* Sidebar Glassmorphism */
+        .sidebar-shadow { box-shadow: -10px 0 30px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V7.5 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V7.6 로딩 중...</p>
         </div>
     </div>
 
@@ -277,11 +273,11 @@
             if (isLoading) return null;
 
             return (
-                <div className="min-h-screen flex flex-col animate-in">
+                <div className="min-h-screen flex flex-col animate-in relative">
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V7.5 Matrix</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V7.6 Matrix</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -290,14 +286,14 @@
                                 { id: 'config', label: '전담 시간 등록', icon: 'Settings' },
                                 { id: 'stats', label: '시수 통계', icon: 'BarChart3' },
                             ].map(tab => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <SafeIcon name={tab.icon} size={14} /> {tab.label}
                                 </button>
                             ))}
                         </nav>
                     </header>
 
-                    <main className="p-2 lg:p-4 max-w-[1600px] mx-auto w-full flex-1">
+                    <main className={`p-2 lg:p-4 max-w-[1600px] mx-auto w-full flex-1 transition-all ${isSidebarOpen ? 'pr-[420px]' : ''}`}>
                         {/* 1. 학사 일정 확인 */}
                         {activeTab === 'academic' && (
                             <div className="space-y-4">
@@ -408,12 +404,10 @@
                                                                 
                                                                 {cell.isConflict ? (
                                                                     <div className="w-full flex">
-                                                                        {/* 전담 영역 클릭 */}
                                                                         <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 border-r cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} opacity-70`}>
                                                                             <span className="text-[10px] font-black opacity-50 mb-1">전담</span>
                                                                             <span className="text-[11px] font-black">{specBase?.name}</span>
                                                                         </div>
-                                                                        {/* 강사 영역 클릭 */}
                                                                         <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsSidebarOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text}`}>
                                                                             <span className="text-[10px] font-black opacity-50 mb-1">강사</span>
                                                                             <span className="text-[11px] font-black truncate w-full text-center">{cell.override?.title || specOverride?.name}</span>
@@ -445,7 +439,6 @@
                                 <div className="lg:col-span-2 bg-amber-600 p-8 rounded-[3rem] shadow-xl text-white relative overflow-hidden h-fit">
                                     <div className="absolute -top-10 -right-10 opacity-10 rotate-12"><SafeIcon name="Layers" size={180}/></div>
                                     <h3 className="text-xl font-black mb-1 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Layers" size={24}/> 강사 수업 등록</h3>
-                                    <p className="text-amber-100 text-[11px] mb-8 font-medium relative z-10 opacity-80 uppercase tracking-tighter italic leading-none">External instructor schedules setup.</p>
                                     <div className="space-y-6 relative z-10">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             <div className="space-y-2">
@@ -635,7 +628,6 @@
                                     </div>
                                 </div>
 
-                                {/* 마스터 시간표 에디터 */}
                                 <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-8 border-b bg-slate-50 flex items-center justify-between">
                                         <h4 className="text-lg font-black text-slate-800 italic uppercase tracking-tighter flex items-center gap-2"><SafeIcon name="Table" className="text-indigo-500"/> 전담 시간표 마스터 관리 (수정/삭제 전용)</h4>
@@ -702,7 +694,6 @@
                                         <h3 className="text-3xl font-black flex justify-between items-center text-slate-800 tracking-tighter uppercase italic">5학년 {cls} 시수 분석 <SafeIcon name="BarChart3" size={32} className="text-indigo-200"/></h3>
                                         
                                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-                                            {/* 학기별 분석 루프 */}
                                             {['s1', 's2'].map(sem => (
                                                 <div key={sem} className="space-y-8 p-8 bg-slate-50/50 rounded-[3rem] border border-slate-100 relative overflow-hidden">
                                                     <div className="absolute top-4 right-6 text-[10px] font-black text-indigo-300 uppercase italic tracking-widest">{sem === 's1' ? 'Semester 01' : 'Semester 02'}</div>
@@ -729,7 +720,6 @@
                                                     <div className="mt-8 space-y-4">
                                                         <div className="flex justify-between items-center">
                                                             <h5 className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-1"><SafeIcon name="List" size={14}/> {sem === 's1' ? '1' : '2'}학기 외부강사 수업 내역</h5>
-                                                            {/* 검색창 */}
                                                             <div className="relative">
                                                                 <input 
                                                                     type="text" 
@@ -778,191 +768,202 @@
                         )}
                     </main>
 
-                    {/* V7.5 지능형 Lesson 사이드바 (Sidebar) */}
+                    {/* V7.6 지능형 Lesson 사이드바 (Non-blocking Sidebar) */}
                     {isSidebarOpen && (
-                        <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
-                            {/* 배경 오버레이 */}
-                            <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in transition-opacity"></div>
-                            
-                            {/* 사이드바 본체 */}
-                            <div className="relative w-full max-w-md bg-white h-full shadow-2xl sidebar-in flex flex-col">
-                                {(() => {
-                                    const parts = selectedCell.split('-');
-                                    const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
-                                    const p = parseInt(parts[3]);
-                                    const cls = parts[4];
-                                    const cellData = getCellData(dateStr, p, cls);
-                                    
-                                    const moveItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
-                                    const checkConflict = (d, per) => {
-                                        const res = getCellData(d, per, cls);
-                                        return !!(res.override || res.base);
-                                    };
+                        <div className="fixed top-0 right-0 z-[100] w-full max-w-md h-screen bg-white shadow-2xl sidebar-in sidebar-shadow flex flex-col pointer-events-auto border-l">
+                            {(() => {
+                                const parts = selectedCell.split('-');
+                                const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                                const p = parseInt(parts[3]);
+                                const cls = parts[4];
+                                const cellData = getCellData(dateStr, p, cls);
+                                
+                                const moveItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
+                                
+                                // 타겟 셀 데이터 확인
+                                const mD = moveDate || dateStr;
+                                const mP = movePeriod || p;
+                                const targetCellData = getCellData(mD, mP, cls);
+                                
+                                // 겹침 판별 로직 강화
+                                const isJeondamConflict = !!targetCellData.base && (mD !== dateStr || mP !== p);
+                                const isInstructorConflict = !!targetCellData.override && (mD !== dateStr || mP !== p);
+                                const isBusy = isJeondamConflict || isInstructorConflict;
 
-                                    const mD = moveDate || dateStr;
-                                    const mP = movePeriod || p;
-                                    const isBusy = (mD !== dateStr || mP !== p) && checkConflict(mD, mP);
+                                const currentSubjectName = moveItem 
+                                    ? (moveItem.title || SPECIALISTS.find(s=>s.id===moveItem.type)?.name)
+                                    : "배정된 수업 없음";
 
-                                    return (
-                                        <>
-                                            {/* 헤더 섹션 */}
-                                            <div className="p-8 border-b bg-slate-50 flex justify-between items-center">
-                                                <div className="space-y-1">
-                                                    <h2 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter">Lesson Matrix <span className="text-indigo-600">Pro</span></h2>
-                                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{formatHeaderDate(dateStr)} | {cls} {p}교시</p>
-                                                </div>
-                                                <button onClick={() => setIsSidebarOpen(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 hover:text-slate-600"><SafeIcon name="X" size={24}/></button>
-                                            </div>
-
-                                            {/* 본문 섹션 */}
-                                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                                                
-                                                {/* 1. 현재 수업 상태 확인 */}
-                                                <div className="space-y-4">
-                                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">현재 수업 정보 확인</h3>
-                                                    {cellData.override || cellData.base ? (
-                                                        <div className="space-y-2">
-                                                            {cellData.isConflict && (
-                                                                <div className="bg-rose-50 border border-rose-100 p-4 rounded-3xl flex items-center gap-3 mb-4">
-                                                                    <div className="bg-rose-500 p-2 rounded-xl text-white shadow-lg shadow-rose-200 animate-pulse"><SafeIcon name="AlertTriangle" size={16}/></div>
-                                                                    <div>
-                                                                        <div className="text-[11px] font-black text-rose-600 uppercase tracking-tighter">Conflict Detected</div>
-                                                                        <div className="text-[10px] font-bold text-rose-400">전담과 강사 수업이 동시에 배정되었습니다.</div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                            <div className="grid grid-cols-1 gap-3">
-                                                                {cellData.base && (
-                                                                    <div onClick={() => setActiveMoveItem('base')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'base' ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-xl' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.base.type)?.bg} flex flex-col relative overflow-hidden`}>
-                                                                        {activeMoveItem === 'base' && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
-                                                                        <span className="text-[10px] font-black opacity-50 uppercase mb-1">전담 수업 (Master)</span>
-                                                                        <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.base.type)?.text}`}>{SPECIALISTS.find(s=>s.id===cellData.base.type)?.name}</span>
-                                                                    </div>
-                                                                )}
-                                                                {cellData.override && (
-                                                                    <div onClick={() => setActiveMoveItem('override')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'override' || !activeMoveItem ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-xl' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.bg} flex flex-col relative overflow-hidden`}>
-                                                                        {(activeMoveItem === 'override' || !activeMoveItem) && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
-                                                                        <span className="text-[10px] font-black opacity-50 uppercase mb-1">등록 수업 (Override)</span>
-                                                                        <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.text}`}>{cellData.override.title || SPECIALISTS.find(s=>s.id===cellData.override.type)?.name}</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="p-8 border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center text-center space-y-3">
-                                                            <div className="bg-slate-50 p-4 rounded-3xl text-slate-200"><SafeIcon name="Inbox" size={32}/></div>
-                                                            <div className="space-y-1">
-                                                                <p className="text-[13px] font-black text-slate-500 italic uppercase tracking-tighter leading-none">현재 배정된 수업이 없습니다.</p>
-                                                                <p className="text-[10px] font-bold text-slate-300">새로운 수업을 등록하거나 다른 시간을 가져오세요.</p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* 2. 수업 조정 (이동/등록) */}
-                                                <div className="space-y-4">
-                                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">스케줄 조정 프로세스</h3>
-                                                    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
-                                                        
-                                                        {moveItem ? (
-                                                            <>
-                                                                <div className="flex items-center gap-4 py-2 border-b border-dashed border-slate-100">
-                                                                    <div className="text-center">
-                                                                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">From</div>
-                                                                        <div className="text-[12px] font-black text-slate-700">{dateStr.replace(/-/g,'.')}</div>
-                                                                    </div>
-                                                                    <SafeIcon name="ArrowRight" className="text-indigo-400" size={16}/>
-                                                                    <div className="text-center">
-                                                                        <div className="text-[10px] font-black text-indigo-300 uppercase tracking-tighter">To (Target)</div>
-                                                                        <div className="text-[12px] font-black text-indigo-600">{mD.replace(/-/g,'.')} <span className="text-slate-400">|</span> {mP}교시</div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="space-y-4">
-                                                                    <div className="space-y-1">
-                                                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">날짜 선택</label>
-                                                                        <input type="date" value={mD} onChange={e => setMoveDate(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none focus:ring-2 focus:ring-indigo-100" />
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">교시 선택</label>
-                                                                        <select value={mP} onChange={e => setMovePeriod(parseInt(e.target.value))} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none">
-                                                                            {PERIODS.map(n => <option key={n} value={n}>{n}교시</option>)}
-                                                                        </select>
-                                                                    </div>
-                                                                    <div className={`flex items-center gap-2 p-4 rounded-2xl border transition-all ${isBusy ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
-                                                                        <SafeIcon name={isBusy ? "AlertCircle" : "CheckCircle2"} size={16}/>
-                                                                        <span className="text-[11px] font-black tracking-tighter leading-none">{isBusy ? "선택하신 시간에는 이미 수업이 배정되어 있습니다." : "해당 시간으로 수업을 조정할 수 있습니다."}</span>
-                                                                    </div>
-                                                                    <button 
-                                                                        disabled={isBusy}
-                                                                        onClick={async () => {
-                                                                            if(isBusy) return;
-                                                                            if(!confirm(`${formatHeaderDate(mD)} ${mP}교시로 수업을 조정하시겠습니까?`)) return;
-                                                                            setIsSaving(true);
-                                                                            try {
-                                                                                const lessonData = { title: moveItem.title || "", type: moveItem.type, status: 'held', classLabel: cls };
-                                                                                if (activeMoveItem === 'override' || cellData.override) {
-                                                                                    await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
-                                                                                }
-                                                                                await saveData('overrides', `${mD}-${mP}-${cls}`, lessonData);
-                                                                                setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
-                                                                            } catch(e) { alert("조정 오류: " + e.message); }
-                                                                            setIsSaving(false);
-                                                                        }} 
-                                                                        className={`w-full py-5 rounded-[1.5rem] font-black text-[14px] shadow-xl transition-all btn-press ${isBusy ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
-                                                                        {isBusy ? '시간대를 다시 선택하세요' : '이 시간으로 수업 조정 실행'}
-                                                                    </button>
-                                                                </div>
-                                                            </>
-                                                        ) : (
-                                                            <div className="space-y-4">
-                                                                <div className="space-y-1">
-                                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">새 수업명</label>
-                                                                    <input type="text" placeholder="예: 생존수영, 자치 등" id="new-lesson-sidebar-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none" />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">과목 타입</label>
-                                                                    <select id="new-lesson-sidebar-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none">
-                                                                        {SPECIALISTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                                    </select>
-                                                                </div>
-                                                                <button onClick={async () => {
-                                                                    const title = document.getElementById('new-lesson-sidebar-title').value;
-                                                                    const type = document.getElementById('new-lesson-sidebar-type').value;
-                                                                    if(!title) return alert("수업명을 입력하세요.");
-                                                                    setIsSaving(true);
-                                                                    await saveData('overrides', selectedCell, { title, type, status: 'held', classLabel: cls });
-                                                                    setIsSaving(false); setIsSidebarOpen(false);
-                                                                }} className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[14px] shadow-xl active:scale-95 transition-all">현재 자리에 수업 등록</button>
-                                                            </div>
-                                                        )}
+                                return (
+                                    <>
+                                        {/* 헤더 섹션: 정보 표시 직관화 */}
+                                        <div className="p-8 border-b bg-slate-50 flex justify-between items-start">
+                                            <div className="space-y-1">
+                                                <h2 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter">Lesson <span className="text-indigo-600">Editor</span></h2>
+                                                <div className="flex flex-col mt-2 space-y-0.5">
+                                                    <div className="text-[13px] font-black text-slate-700">
+                                                        {formatHeaderDate(dateStr)} / {p}교시
+                                                    </div>
+                                                    <div className="text-[12px] font-bold text-slate-400">
+                                                        {cls}반 (<span className="text-indigo-500 font-black">{currentSubjectName}</span>)
                                                     </div>
                                                 </div>
                                             </div>
+                                            <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-slate-200 rounded-xl transition-all text-slate-400 hover:text-slate-600"><SafeIcon name="X" size={24}/></button>
+                                        </div>
 
-                                            {/* 푸터 섹션 (삭제 버튼 등) */}
-                                            <div className="p-8 border-t bg-slate-50/50 space-y-3">
-                                                {(cellData.override) && (
-                                                    <button onClick={async () => {
-                                                        if(confirm("이 수업 기록을 완전히 삭제하시겠습니까?")) {
-                                                            await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
-                                                            setIsSidebarOpen(false);
-                                                        }
-                                                    }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl hover:bg-rose-50 transition-all text-[12px] uppercase tracking-widest border border-rose-100 flex items-center justify-center gap-2">
-                                                        <SafeIcon name="Trash2" size={14}/> Reset Current Slot
-                                                    </button>
+                                        {/* 본문 섹션 */}
+                                        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                                            
+                                            {/* 현재 선택된 수업 미리보기 */}
+                                            <div className="space-y-4">
+                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic">Target Content</h3>
+                                                {cellData.override || cellData.base ? (
+                                                    <div className="grid grid-cols-1 gap-3">
+                                                        {cellData.base && (
+                                                            <div onClick={() => setActiveMoveItem('base')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'base' ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.base.type)?.bg} flex flex-col relative`}>
+                                                                {activeMoveItem === 'base' && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
+                                                                <span className="text-[10px] font-black opacity-50 uppercase mb-1">전담 시간표 마스터</span>
+                                                                <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.base.type)?.text}`}>{SPECIALISTS.find(s=>s.id===cellData.base.type)?.name}</span>
+                                                            </div>
+                                                        )}
+                                                        {cellData.override && (
+                                                            <div onClick={() => setActiveMoveItem('override')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'override' || !activeMoveItem ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.bg} flex flex-col relative`}>
+                                                                {(activeMoveItem === 'override' || !activeMoveItem) && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
+                                                                <span className="text-[10px] font-black opacity-50 uppercase mb-1">등록된 강사/기타 수업</span>
+                                                                <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.text}`}>{cellData.override.title || SPECIALISTS.find(s=>s.id===cellData.override.type)?.name}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-8 border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center text-center space-y-3">
+                                                        <div className="bg-slate-50 p-4 rounded-3xl text-slate-200"><SafeIcon name="Inbox" size={32}/></div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-[13px] font-black text-slate-500 italic leading-none">배정된 수업이 없습니다.</p>
+                                                            <p className="text-[10px] font-bold text-slate-300">새 수업을 등록하거나 다른 수업을 가져오세요.</p>
+                                                        </div>
+                                                    </div>
                                                 )}
-                                                <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-4 bg-slate-100 text-slate-400 font-black rounded-2xl transition-all text-[12px] uppercase tracking-widest">Close Sidebar</button>
                                             </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
+
+                                            {/* 스케줄 조정 프로세스: 직관성 강화 */}
+                                            <div className="space-y-4">
+                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic">Schedule Flow</h3>
+                                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                                                    
+                                                    {moveItem ? (
+                                                        <>
+                                                            <div className="flex items-center gap-4 py-2 border-b border-dashed border-slate-100">
+                                                                <div className="text-center">
+                                                                    <div className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">Current</div>
+                                                                    <div className="text-[11px] font-black text-slate-700">{dateStr.split('-').slice(1).join('.')} ({p})</div>
+                                                                </div>
+                                                                <SafeIcon name="ArrowRight" className="text-indigo-400" size={16}/>
+                                                                <div className="text-center">
+                                                                    <div className="text-[10px] font-black text-indigo-300 uppercase tracking-tighter">Adjust To</div>
+                                                                    <div className="text-[11px] font-black text-indigo-600">{mD.split('-').slice(1).join('.')} ({mP})</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-4">
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">원하는 날짜 선택</label>
+                                                                    <input type="date" value={mD} onChange={e => setMoveDate(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none focus:ring-2 focus:ring-indigo-100" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">원하는 교시 선택</label>
+                                                                    <select value={mP} onChange={e => setMovePeriod(parseInt(e.target.value))} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none">
+                                                                        {PERIODS.map(n => <option key={n} value={n}>{n}교시</option>)}
+                                                                    </select>
+                                                                </div>
+
+                                                                {/* 상태 안내 및 경고 로직 강화 */}
+                                                                {isJeondamConflict ? (
+                                                                    <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600">
+                                                                        <SafeIcon name="AlertCircle" size={16}/>
+                                                                        <span className="text-[11px] font-black tracking-tighter leading-none">전담 수업과 겹쳐서 조정할 수 없습니다.</span>
+                                                                    </div>
+                                                                ) : isInstructorConflict ? (
+                                                                    <div className="flex items-center gap-2 p-4 rounded-2xl border bg-amber-50 border-amber-100 text-amber-600">
+                                                                        <SafeIcon name="AlertTriangle" size={16}/>
+                                                                        <span className="text-[11px] font-black tracking-tighter leading-none">다른 강사 수업과 겹칩니다. (덮어쓰기 가능)</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-2 p-4 rounded-2xl border bg-emerald-50 border-emerald-100 text-emerald-600">
+                                                                        <SafeIcon name="CheckCircle2" size={16}/>
+                                                                        <span className="text-[11px] font-black tracking-tighter leading-none">이동 가능한 빈 시간입니다.</span>
+                                                                    </div>
+                                                                )}
+
+                                                                <button 
+                                                                    disabled={isJeondamConflict}
+                                                                    onClick={async () => {
+                                                                        if(isJeondamConflict) return;
+                                                                        if(!confirm(`${formatHeaderDate(mD)} ${mP}교시로 수업을 조정할까요?`)) return;
+                                                                        setIsSaving(true);
+                                                                        try {
+                                                                            const lessonData = { title: moveItem.title || "", type: moveItem.type, status: 'held', classLabel: cls };
+                                                                            if (activeMoveItem === 'override' || cellData.override) {
+                                                                                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
+                                                                            }
+                                                                            await saveData('overrides', `${mD}-${mP}-${cls}`, lessonData);
+                                                                            setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
+                                                                        } catch(e) { alert("조정 오류: " + e.message); }
+                                                                        setIsSaving(false);
+                                                                    }} 
+                                                                    className={`w-full py-5 rounded-[1.5rem] font-black text-[14px] shadow-xl transition-all btn-press ${isJeondamConflict ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
+                                                                    {isJeondamConflict ? '조정 불가' : '이 시간으로 수업 조정'}
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="space-y-4">
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">신규 수업 명칭</label>
+                                                                <input type="text" placeholder="예: 창체, 자치 등" id="new-lesson-sidebar-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">수업 성격 선택</label>
+                                                                <select id="new-lesson-sidebar-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none">
+                                                                    {SPECIALISTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                                </select>
+                                                            </div>
+                                                            <button onClick={async () => {
+                                                                const title = document.getElementById('new-lesson-sidebar-title').value;
+                                                                const type = document.getElementById('new-lesson-sidebar-type').value;
+                                                                if(!title) return alert("수업명을 입력하세요.");
+                                                                setIsSaving(true);
+                                                                await saveData('overrides', selectedCell, { title, type, status: 'held', classLabel: cls });
+                                                                setIsSaving(false); setIsSidebarOpen(false);
+                                                            }} className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[14px] shadow-xl active:scale-95 transition-all">현재 자리에 수업 등록</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 푸터 섹션 */}
+                                        <div className="p-8 border-t bg-slate-50/50 space-y-3">
+                                            {(cellData.override) && (
+                                                <button onClick={async () => {
+                                                    if(confirm("이 수업 기록을 완전히 삭제하시겠습니까?")) {
+                                                        await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
+                                                        setIsSidebarOpen(false);
+                                                    }
+                                                }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl hover:bg-rose-50 transition-all text-[12px] uppercase tracking-widest border border-rose-100 flex items-center justify-center gap-2">
+                                                    <SafeIcon name="Trash2" size={14}/> Reset Current Slot
+                                                </button>
+                                            )}
+                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-4 bg-slate-100 text-slate-400 font-black rounded-2xl transition-all text-[12px] uppercase tracking-widest">Close Sidebar</button>
+                                        </div>
+                                    </>
+                                );
+                            })()}
                         </div>
                     )}
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-90 hover:opacity-100 transition-opacity scale-90">
                         <div className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(129,140,248,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Intelligence V7.5 Global Master</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Intelligence V7.6 Global Sync</span>
                     </div>
                 </div>
             );
