@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V8.8 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V8.9 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -84,12 +84,21 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.8 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.9 로딩 중...</p>
         </div>
     </div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, createElement } = React;
+
+        // --- 헬퍼 함수 ---
+        const getMonday = (dateStr) => {
+            const date = new Date(dateStr + 'T00:00:00');
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1); 
+            const monday = new Date(date.setDate(diff));
+            return monday.toLocaleDateString('en-CA');
+        };
 
         const SafeIcon = ({ name, size = 16, className = "" }) => {
             const [ready, setReady] = useState(false);
@@ -140,6 +149,8 @@
 
             // 시수 통계용 검색어
             const [statSearch, setStatSearch] = useState("");
+            // 강사 목록용 검색어
+            const [instSearch, setInstSearch] = useState("");
 
             // 이동/조정용
             const [moveDate, setMoveDate] = useState("");
@@ -218,16 +229,13 @@
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id));
             };
 
-            // V8.8 정밀 데이터 엔진: 휴업/행사/공휴일 완벽 분리
             const getCellData = (dateStr, period, classLabel) => {
                 const overrideKey = `${dateStr}-${period}-${classLabel}`;
                 const date = new Date(dateStr + 'T00:00:00'); 
                 const dayIdx = (date.getDay() + 6) % 7; 
 
-                // 1. 공휴일 체크 (완전 휴무)
                 if (HOLIDAYS_2026[dateStr]) return { type: 'holiday', title: HOLIDAYS_2026[dateStr], isHoliday: true };
                 
-                // 2. 등록된 학사 일정 체크
                 const academic = academicEvents[dateStr];
                 if (academic) {
                     if (academic.isHoliday) return { type: 'holiday', title: academic.title, isHoliday: true };
@@ -264,7 +272,6 @@
                     const stop = new Date(end + 'T00:00:00');
                     while (curr <= stop) {
                         const dStr = curr.toLocaleDateString('en-CA');
-                        // 학교 행사나 공휴일/휴업일에는 전담 시수가 카운트되지 않음
                         const academic = academicEvents[dStr];
                         const isNoClassDay = HOLIDAYS_2026[dStr] || academic?.isHoliday || academic?.isEvent;
                         
@@ -312,7 +319,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.8 Pro</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.9 Pro</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -370,17 +377,19 @@
                                             <thead>
                                                 <tr className="bg-slate-50 border-b">
                                                     <th className="p-4 border-r w-16 text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">교시</th>
-                                                    {DAYS.map((d, i) => {
+                                                    {(() => {
                                                         const mondayStr = getMonday(selectedDate);
-                                                        const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
-                                                        const dateStr = colDate.toLocaleDateString('en-CA');
-                                                        const isHol = HOLIDAYS_2026[dateStr] || academicEvents[dateStr]?.isHoliday;
-                                                        const isEv = academicEvents[dateStr]?.isEvent;
-                                                        return <th key={i} className={`p-4 border-r min-w-[180px] ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
-                                                            <div className={`text-[10px] font-bold leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-400'}`}>{dateStr.split('-').slice(1).join('.')}</div>
-                                                            <div className={`font-black text-sm mt-1 leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-700'}`}>{d}요일</div>
-                                                        </th>;
-                                                    })}
+                                                        return DAYS.map((d, i) => {
+                                                            const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
+                                                            const dateStr = colDate.toLocaleDateString('en-CA');
+                                                            const isHol = HOLIDAYS_2026[dateStr] || academicEvents[dateStr]?.isHoliday;
+                                                            const isEv = academicEvents[dateStr]?.isEvent;
+                                                            return <th key={i} className={`p-4 border-r min-w-[180px] ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
+                                                                <div className={`text-[10px] font-bold leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-400'}`}>{dateStr.split('-').slice(1).join('.')}</div>
+                                                                <div className={`font-black text-sm mt-1 leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-700'}`}>{d}요일</div>
+                                                            </th>;
+                                                        });
+                                                    })()}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -391,27 +400,19 @@
                                                             const mondayStr = getMonday(selectedDate);
                                                             const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
                                                             const dateStr = colDate.toLocaleDateString('en-CA');
-                                                            const cellData = getCellData(dateStr, p, currentGradeClasses[0]);
-                                                            return <td key={i} className={`p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all ${cellData.isHoliday ? 'holiday-bg' : cellData.isEvent ? 'event-bg' : ''}`}>
-                                                                {cellData.isHoliday || cellData.isEvent ? (
-                                                                    <div className="h-full flex flex-col justify-center items-center opacity-40">
-                                                                        <SafeIcon name={cellData.isHoliday ? "Flag" : "Info"} size={14} className={`${cellData.isHoliday ? 'holiday-text' : 'event-text'} mb-1`} />
-                                                                        <span className={`text-[10px] font-black ${cellData.isHoliday ? 'holiday-text' : 'event-text'}`}>{cellData.title}</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="space-y-1">
-                                                                        {currentGradeClasses.map(cls => {
-                                                                            const data = getCellData(dateStr, p, cls);
-                                                                            const item = data.override || data.base;
-                                                                            if (!item) return null;
-                                                                            const spec = SPECIALISTS.find(s => s.id === (item.type));
-                                                                            return <div key={cls} onClick={(e) => { e.stopPropagation(); setSelectedCell(`${dateStr}-${p}-${cls}`); setActiveMoveItem(data.override ? 'override' : 'base'); setIsSidebarOpen(true); }}
-                                                                                className={`p-1.5 rounded-lg border text-[10px] font-bold truncate flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] ${spec?.bg} ${spec?.text} ${spec?.border} shadow-sm ${data.isConflict ? 'conflict-glow ring-1 ring-rose-400' : ''}`}>
-                                                                                <span className="flex items-center gap-1"><span className="period-badge bg-slate-400/50">{CIRCLE_NUMS[p]}</span>{cls} {item.title || spec?.name}</span>
-                                                                            </div>;
-                                                                        })}
-                                                                    </div>
-                                                                )}
+                                                            return <td key={i} className="p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all">
+                                                                <div className="space-y-1">
+                                                                    {currentGradeClasses.map(cls => {
+                                                                        const data = getCellData(dateStr, p, cls);
+                                                                        const item = data.override || data.base;
+                                                                        if (!item) return null;
+                                                                        const spec = SPECIALISTS.find(s => s.id === (item.type));
+                                                                        return <div key={cls} onClick={(e) => { e.stopPropagation(); setSelectedCell(`${dateStr}-${p}-${cls}`); setActiveMoveItem(data.override ? 'override' : 'base'); setIsSidebarOpen(true); }}
+                                                                            className={`p-1.5 rounded-lg border text-[10px] font-bold truncate flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] ${spec?.bg} ${spec?.text} ${spec?.border} shadow-sm ${data.isConflict ? 'conflict-glow ring-1 ring-rose-400' : ''}`}>
+                                                                            <span className="flex items-center gap-1"><span className="period-badge bg-slate-400/50">{CIRCLE_NUMS[p]}</span>{cls} {item.title || spec?.name}</span>
+                                                                        </div>;
+                                                                    })}
+                                                                </div>
                                                             </td>;
                                                         })}
                                                     </tr>
@@ -468,7 +469,6 @@
                                                             <div className={`h-[400px] flex flex-col justify-center items-center ${isHol ? 'text-rose-300' : 'text-indigo-300'}`}>
                                                                 <SafeIcon name={isHol ? "Flag" : "Info"} size={48} className="mb-4 opacity-20" />
                                                                 <p className="font-black italic text-lg">{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate].title}</p>
-                                                                <p className="text-[10px] font-bold mt-2">{isHol ? "학교를 가지 않는 날입니다." : "학교 일정으로 전담 수업이 없습니다."}</p>
                                                             </div>
                                                         ) : PERIODS.map(p => {
                                                             const cell = getCellData(selectedDate, p, cls);
@@ -564,26 +564,32 @@
                                     </div>
                                 </div>
                                 <div className="bg-white p-6 rounded-[3rem] shadow-sm border border-slate-200">
-                                    <h4 className="text-sm font-black text-slate-800 mb-5 flex items-center gap-2 italic uppercase"><SafeIcon name="List" className="text-amber-500" /> 외부강사 등록 내역 (최근 20건)</h4>
+                                    <div className="flex justify-between items-center mb-5">
+                                        <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 italic uppercase"><SafeIcon name="List" className="text-amber-500" /> 외부강사 등록 내역 (전체)</h4>
+                                        <div className="relative">
+                                            <input type="text" placeholder="검색..." value={instSearch} onChange={e => setInstSearch(e.target.value)} className="pl-8 pr-3 py-1 bg-slate-100 border-none rounded-xl text-[10px] font-bold outline-none" />
+                                            <SafeIcon name="Search" size={12} className="absolute left-2.5 top-1.5 text-slate-400" />
+                                        </div>
+                                    </div>
                                     <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
-                                        {Object.entries(overrides).filter(([k,v]) => v.type === 'external').sort((a,b) => b[0].localeCompare(a[0])).slice(0,20).map(([key, v]) => (
-                                            <div key={key} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group shadow-sm border border-slate-100">
-                                                <div className="flex-1">
-                                                    <div className="text-[12px] font-black text-slate-800 truncate leading-none">{v.title}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-tighter leading-none">{key.split('-').slice(0,3).join('.')} ({key.split('-')[3]}교시, {v.classLabel})</div>
-                                                </div>
-                                                <button onClick={async () => { 
-                                                    if(confirm("해당 강사 수업만 삭제할까요? (전담이 겹쳐있었다면 전담은 복구됩니다)")) {
-                                                        const existing = overrides[key];
-                                                        if (existing.hideBase) {
-                                                            await saveData('overrides', key, { hideBase: true });
-                                                        } else {
-                                                            await deleteData('overrides', key);
+                                        {Object.entries(overrides)
+                                            .filter(([k,v]) => v.type === 'external' && (v.title.includes(instSearch) || k.includes(instSearch)))
+                                            .sort((a,b) => b[0].localeCompare(a[0]))
+                                            .map(([key, v]) => (
+                                                <div key={key} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group shadow-sm border border-slate-100">
+                                                    <div className="flex-1">
+                                                        <div className="text-[12px] font-black text-slate-800 truncate leading-none">{v.title}</div>
+                                                        <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-tighter leading-none">{key.split('-').slice(0,3).join('.')} ({key.split('-')[3]}교시, {v.classLabel})</div>
+                                                    </div>
+                                                    <button onClick={async () => { 
+                                                        if(confirm("해당 강사 수업만 삭제할까요?")) {
+                                                            const existing = overrides[key];
+                                                            if (existing.hideBase) await saveData('overrides', key, { hideBase: true });
+                                                            else await deleteData('overrides', key);
                                                         }
-                                                    }
-                                                }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2 bg-white rounded-lg shadow-sm border border-slate-100"><SafeIcon name="Trash2" size={14}/></button>
-                                            </div>
-                                        ))}
+                                                    }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2 bg-white rounded-lg shadow-sm border border-slate-100"><SafeIcon name="Trash2" size={14}/></button>
+                                                </div>
+                                            ))}
                                     </div>
                                 </div>
                             </div>
@@ -591,17 +597,18 @@
 
                         {activeTab === 'config' && (
                             <div className="space-y-10 animate-in">
+                                {/* V8.9 복구된 마스터 시간표 일괄 설정 */}
                                 <div className="bg-indigo-600 p-8 rounded-[3rem] shadow-xl text-white relative overflow-hidden">
                                     <h3 className="text-xl font-black mb-8 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Settings" size={24}/> 전담 시간표 마스터 일괄 설정</h3>
                                     <div className="space-y-8 relative z-10 mt-8">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest leading-none">대상 학급 명칭</label>
-                                                <input type="text" value={fixedClass} onChange={e => setFixedClass(e.target.value)} placeholder="예: 5-1" className="w-full p-4 rounded-[1.5rem] bg-white/10 border-none text-white placeholder-white/30 font-black text-[13px] outline-none focus:bg-white focus:text-slate-800 transition-all shadow-inner" />
+                                                <input type="text" value={fixedClass} onChange={e => setFixedClass(e.target.value)} placeholder="예: 5-1" className="w-full p-4 rounded-[1.5rem] bg-white/10 border-none text-white placeholder-white/30 font-black text-[13px] focus:bg-white focus:text-slate-800" />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest leading-none">과목 선택</label>
-                                                <select value={fixedSpec} onChange={e => setFixedSpec(e.target.value)} className="w-full p-4 rounded-[1.5rem] bg-white/20 border-none text-white font-black text-[13px] outline-none cursor-pointer">
+                                                <select value={fixedSpec} onChange={e => setFixedSpec(e.target.value)} className="w-full p-4 rounded-[1.5rem] bg-white/20 border-none text-white font-black text-[13px]">
                                                     {SPECIALISTS.filter(s => s.id !== 'external').map(s => <option key={s.id} value={s.id} className="text-slate-800">{s.name}</option>)}
                                                 </select>
                                             </div>
@@ -616,7 +623,7 @@
                                                             {DAYS.map((_, dIdx) => {
                                                                 const slotId = `${dIdx}-${p}`;
                                                                 const isSelected = fixedSlots.includes(slotId);
-                                                                return <td key={dIdx} className="p-1"><button onClick={() => isSelected ? setFixedSlots(fixedSlots.filter(s => s !== slotId)) : setFixedSlots([...fixedSlots, slotId])} className={`w-full py-3 rounded-xl border-2 transition-all font-black text-[10px] ${isSelected ? 'bg-white text-indigo-600 border-white shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'}`}>{isSelected ? fixedClass : '비었음'}</button></td>;
+                                                                return <td key={dIdx} className="p-1"><button onClick={() => isSelected ? setFixedSlots(fixedSlots.filter(s => s !== slotId)) : setFixedSlots([...fixedSlots, slotId])} className={`w-full py-3 rounded-xl border-2 transition-all font-black text-[10px] ${isSelected ? 'bg-white text-indigo-600 border-white shadow-lg' : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'}`}>{isSelected ? fixedClass : '비었음'}</button></td>;
                                                             })}
                                                         </tr>
                                                     ))}
@@ -634,72 +641,117 @@
                                                 alert("마스터 저장 완료!"); setFixedSlots([]);
                                             } catch (e) { alert("저장 오류: " + e.message); }
                                             setIsSaving(false);
-                                        }} className="w-full py-5 bg-white text-indigo-600 font-black rounded-[2rem] shadow-xl hover:bg-indigo-50 transition-all active:scale-95">전담 마스터 저장</button>
+                                        }} className="w-full py-5 bg-white text-indigo-600 font-black rounded-[2rem] shadow-xl hover:bg-indigo-50 transition-all">전담 마스터 저장</button>
+                                    </div>
+                                </div>
+
+                                {/* 마스터 시간표 개별 관리 그리드 복구 */}
+                                <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-8 border-b bg-slate-50 flex justify-between items-center">
+                                        <h4 className="text-lg font-black text-slate-800 italic flex items-center gap-2"><SafeIcon name="Table" className="text-indigo-500"/> 전담 마스터 시간표 전체 관리</h4>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b">
+                                                    <th className="p-5 border-r w-24 text-xs font-black text-slate-400">교시</th>
+                                                    {DAYS.map(d => <th key={d} className="p-5 border-r font-black text-slate-700">{d}요일</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {PERIODS.map(p => (
+                                                    <tr key={p} className="border-b last:border-0">
+                                                        <td className="p-5 bg-slate-50/30 border-r text-center font-black text-slate-200 text-3xl italic">{p}</td>
+                                                        {DAYS.map((_, dIdx) => {
+                                                            const cellItems = Object.entries(baseSchedule)
+                                                                .filter(([k, v]) => v.dayIdx === dIdx && v.period === p)
+                                                                .map(([key, item]) => ({ key, ...item }));
+                                                            return (
+                                                                <td key={dIdx} className="p-2 border-r last:border-0 align-top h-32 bg-white/50">
+                                                                    <div className="flex flex-col gap-1.5 h-full min-h-[100px] border border-dashed border-slate-100 rounded-xl p-1">
+                                                                        {cellItems.map((item, idx) => {
+                                                                            const spec = SPECIALISTS.find(s=>s.id===item.type);
+                                                                            return (
+                                                                                <div key={idx} className={`group relative p-2 rounded-xl border text-[10px] font-black transition-all ${spec?.bg} ${spec?.text} shadow-sm truncate`}>
+                                                                                    {spec?.name}: {item.classLabel}
+                                                                                    <button onClick={async () => { if(confirm("삭제하시겠습니까?")) await deleteData('base', item.key); }} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded p-1 text-rose-500"><SafeIcon name="Trash2" size={10}/></button>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
-                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
+                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 h-fit">
                                         <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 및 목표 시수 설정</h4>
                                         <div className="space-y-6">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400">1학기 시작</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1학기 시작</label>
                                                     <input type="date" value={semesterConfig.s1Start} onChange={e => setSemesterConfig({...semesterConfig, s1Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400">1학기 종료</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1학기 종료</label>
                                                     <input type="date" value={semesterConfig.s1End} onChange={e => setSemesterConfig({...semesterConfig, s1End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400">2학기 시작</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">2학기 시작</label>
                                                     <input type="date" value={semesterConfig.s2Start} onChange={e => setSemesterConfig({...semesterConfig, s2Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400">2학기 종료</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">2학기 종료</label>
                                                     <input type="date" value={semesterConfig.s2End} onChange={e => setSemesterConfig({...semesterConfig, s2End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                {SPECIALISTS.map(s => (
+                                            {/* 외부강사 제외된 목표 시수 */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {SPECIALISTS.filter(s => s.id !== 'external').map(s => (
                                                     <div key={s.id} className="space-y-1">
-                                                        <label className="text-[10px] font-black text-slate-400">{s.name} 목표</label>
-                                                        <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value)})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.name} 목표</label>
+                                                        <input type="number" value={targetHours[s.id] || 0} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value)})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                     </div>
                                                 ))}
                                             </div>
                                             <button onClick={async () => {
                                                 await saveData('academic', 'semesters', semesterConfig);
                                                 await saveData('academic', 'targets', targetHours);
-                                                alert("설정 저장 완료!");
-                                            }} className="w-full py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black shadow-lg hover:bg-indigo-700 transition-all">설정 데이터 저장</button>
+                                                alert("저장 완료!");
+                                            }} className="w-full py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black shadow-lg">설정 저장</button>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
+                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 h-fit">
                                         <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="AlertTriangle" className="text-rose-500"/> 학사 일정(휴업/행사) 등록</h4>
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <input type="date" id="event-date" defaultValue={selectedDate} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                <input type="text" id="event-title" placeholder="예: 재량휴업일, 개학식" className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                <input type="text" id="event-title" placeholder="일정명" className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                             </div>
                                             <div className="flex bg-slate-100 p-1 rounded-2xl">
-                                                <button id="btn-type-hol" onClick={() => { window.event_type = 'hol'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm">공휴일/휴업일 (학교 안감)</button>
-                                                <button id="btn-type-ev" onClick={() => { window.event_type = 'ev'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-indigo-600 shadow-sm'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400">학교 행사 (전담 수업만 없음)</button>
+                                                <button id="btn-type-hol" onClick={() => { window.event_type = 'hol'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm">공휴일/휴업일</button>
+                                                <button id="btn-type-ev" onClick={() => { window.event_type = 'ev'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-indigo-600 shadow-sm'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400">학교 행사</button>
                                             </div>
                                             <button onClick={async () => {
                                                 const d = document.getElementById('event-date').value;
                                                 const t = document.getElementById('event-title').value;
                                                 const type = window.event_type || 'hol';
-                                                if(!d || !t) return alert("날짜와 행사명을 입력하세요.");
+                                                if(!d || !t) return alert("입력 오류");
                                                 await saveData('academic', d, { title: t, isHoliday: type === 'hol', isEvent: type === 'ev' });
-                                                alert("일정 등록 완료!");
-                                            }} className="w-full py-4 bg-rose-500 text-white rounded-[1.5rem] font-black shadow-lg">일정 추가</button>
+                                                alert("추가 완료");
+                                            }} className="w-full py-4 bg-rose-500 text-white rounded-[1.5rem] font-black">일정 추가</button>
                                             <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 mt-4 bg-slate-50 p-2 rounded-2xl">
                                                 {Object.entries(academicEvents).sort().map(([k,v]) => (
                                                     <div key={k} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl text-[11px] font-bold">
-                                                        <span className={v.isHoliday ? 'text-rose-600' : 'text-indigo-600'}>{k} : {v.title} ({v.isHoliday ? '휴업' : '행사'})</span>
-                                                        <button onClick={() => deleteData('academic', k)} className="text-rose-400 p-1 hover:bg-rose-50 rounded-lg"><SafeIcon name="X" size={14}/></button>
+                                                        <span className={v.isHoliday ? 'text-rose-600' : 'text-indigo-600'}>{k}: {v.title} ({v.isHoliday ? '휴업' : '행사'})</span>
+                                                        <button onClick={() => deleteData('academic', k)} className="text-rose-400 p-1"><SafeIcon name="X" size={14}/></button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -733,7 +785,7 @@
                                                                     <div key={spec.id} className="space-y-2">
                                                                         <div className="flex justify-between items-end px-1 leading-none">
                                                                             <span className="font-bold text-slate-500 text-xs">{spec.name}</span>
-                                                                            <span className="font-black text-slate-900 text-lg leading-none">{count} <span className="text-slate-300 font-bold text-[10px]">/ {target}</span></span>
+                                                                            <span className="font-black text-slate-900 text-lg leading-none">{count} {target > 0 && <span className="text-slate-300 font-bold text-[10px]">/ {target}</span>}</span>
                                                                         </div>
                                                                         <div className="h-3 bg-white rounded-full overflow-hidden border border-slate-50 shadow-inner">
                                                                             <div className={`h-full ${spec.color} transition-all duration-1000 shadow-sm`} style={{ width: `${percent}%` }}></div>
@@ -752,7 +804,7 @@
                                                                             placeholder="수업명/날짜 검색..." 
                                                                             value={statSearch}
                                                                             onChange={(e) => setStatSearch(e.target.value)}
-                                                                            className="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all w-[180px] shadow-sm"
+                                                                            className="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold outline-none w-[180px] shadow-sm"
                                                                         />
                                                                         <SafeIcon name="Search" size={12} className="absolute left-2.5 top-2 text-slate-300" />
                                                                     </div>
@@ -793,31 +845,31 @@
                                 const checkConflicts = () => {
                                     if (!currentItem) return null; 
                                     const targetCell = getCellData(mD, mP, cls);
-                                    if (targetCell.isHoliday || targetCell.isEvent) return { msg: '공휴일/휴업일/학교 행사일에는 이동할 수 없습니다.' };
-                                    if ((targetCell.override || targetCell.base) && (mD !== dateStr || mP !== p)) return { msg: `${cls}반에 이미 다른 수업이 배정되어 있습니다.` };
+                                    if (targetCell.isHoliday || targetCell.isEvent) return { msg: '학교 일정/공휴일에는 이동 불가' };
+                                    if ((targetCell.override || targetCell.base) && (mD !== dateStr || mP !== p)) return { msg: `${cls}반에 이미 수업이 있습니다.` };
                                     for (const otherCls of currentGradeClasses) {
                                         if (otherCls === cls && mD === dateStr && mP === p) continue; 
                                         const otherData = getCellData(mD, mP, otherCls);
                                         const otherItem = otherData.override || otherData.base;
-                                        if (otherItem && otherItem.type === currentItem.type) return { msg: `${SPECIALISTS.find(s=>s.id===currentItem.type)?.name} 선생님은 해당 시간에 ${otherCls} 수업 중입니다.` };
+                                        if (otherItem && otherItem.type === currentItem.type) return { msg: `해당 시간에 ${otherCls} 수업 중입니다.` };
                                     }
                                     return null;
                                 };
 
                                 const conflict = checkConflicts();
-                                const currentSubjectName = currentItem ? (currentItem.title || SPECIALISTS.find(s=>s.id===currentItem.type)?.name) : "배정된 수업 없음";
+                                const currentSubjectName = currentItem ? (currentItem.title || SPECIALISTS.find(s=>s.id===currentItem.type)?.name) : "없음";
 
                                 return (
                                     <>
                                         <div className="p-8 border-b bg-slate-50 flex justify-between items-start">
                                             <div className="space-y-2">
-                                                <h2 className="text-xl font-black text-slate-800 italic uppercase tracking-widest leading-none mt-2">Lesson <span className="text-indigo-600">Editor</span></h2>
-                                                <div className="text-[12px] font-black text-slate-700 bg-white px-3 py-1.5 rounded-full border shadow-sm w-fit uppercase tracking-tighter leading-none mt-2">
+                                                <h2 className="text-xl font-black text-slate-800 italic uppercase leading-none mt-2">Lesson <span className="text-indigo-600">Editor</span></h2>
+                                                <div className="text-[12px] font-black text-slate-700 bg-white px-3 py-1.5 rounded-full border mt-2">
                                                     {formatHeaderDate(dateStr)} / {p}교시
                                                 </div>
                                                 <div className="text-[12px] font-bold text-slate-400 ml-1 italic mt-2">{cls}반 - <span className="text-indigo-600 font-black">{currentSubjectName}</span></div>
                                             </div>
-                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="p-2 hover:bg-slate-200 rounded-xl transition-all text-slate-400"><SafeIcon name="X" size={24}/></button>
+                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="p-2 hover:bg-slate-200 rounded-xl text-slate-400"><SafeIcon name="X" size={24}/></button>
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
@@ -828,24 +880,19 @@
                                                         <div className="space-y-4">
                                                             <div className="grid grid-cols-1 gap-4">
                                                                 <div className="space-y-2">
-                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">이동 목표 날짜</label>
-                                                                    <input type="date" value={mD} onChange={e => setMoveDate(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none text-[14px]" />
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">이동 목표 날짜</label>
+                                                                    <input type="date" value={mD} onChange={e => setMoveDate(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 font-black text-slate-800 outline-none text-[14px]" />
                                                                 </div>
                                                                 <div className="space-y-2">
-                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">이동 목표 교시</label>
-                                                                    <select value={mP} onChange={e => setMovePeriod(parseInt(e.target.value))} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none text-[14px]">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">이동 목표 교시</label>
+                                                                    <select value={mP} onChange={e => setMovePeriod(parseInt(e.target.value))} className="w-full p-4 rounded-2xl bg-slate-50 font-black text-slate-800 outline-none text-[14px]">
                                                                         {PERIODS.map(n => <option key={n} value={n}>{n}교시</option>)}
                                                                     </select>
                                                                 </div>
                                                             </div>
-                                                            {conflict ? (
+                                                            {conflict && (
                                                                 <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600 animate-in">
                                                                     <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-none">{conflict.msg}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex flex-col gap-2 p-5 rounded-2xl border bg-emerald-50/50 border-emerald-100 text-emerald-700 animate-in">
-                                                                    <div className="flex items-center gap-2"><SafeIcon name="CheckCircle2" size={16}/><span className="text-[11px] font-black uppercase italic leading-none">Ready to Move</span></div>
-                                                                    <p className="text-[10px] font-bold opacity-70 italic leading-none">이 수업만 이동되며, 겹쳐있던 다른 수업은 보존됩니다.</p>
                                                                 </div>
                                                             )}
                                                             <button disabled={!!conflict} onClick={async () => {
@@ -865,7 +912,7 @@
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
                                                                     } catch(e) { alert("오류: " + e.message); }
                                                                     setIsSaving(false);
-                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all btn-press ${conflict ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>달력에 반영</button>
+                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl ${conflict ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>달력에 반영</button>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-6">
@@ -875,7 +922,7 @@
                                                             </div>
                                                             {newRegMode === 'master' ? (
                                                                 <div className="space-y-4 animate-in">
-                                                                    <select id="new-master-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none shadow-inner">
+                                                                    <select id="new-master-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
                                                                         {SPECIALISTS.filter(s=>s.id!=='external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
                                                                     <button onClick={async () => {
@@ -883,22 +930,22 @@
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className="w-full py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">달력에 반영</button>
+                                                                    }} className="w-full py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">달력에 반영</button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="space-y-4 animate-in">
-                                                                    <input type="text" placeholder="수업명 입력" id="new-custom-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] shadow-inner outline-none" />
-                                                                    <select id="new-custom-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none shadow-inner">
+                                                                    <input type="text" placeholder="수업명" id="new-custom-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none" />
+                                                                    <select id="new-custom-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
                                                                         {SPECIALISTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
                                                                     <button onClick={async () => {
                                                                         const title = document.getElementById('new-custom-title').value;
                                                                         const type = document.getElementById('new-custom-type').value;
-                                                                        if(!title) return alert("수업명을 입력하세요.");
+                                                                        if(!title) return alert("수업명 입력");
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, title, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className="w-full py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl hover:bg-black active:scale-95 transition-all">달력에 반영</button>
+                                                                    }} className="w-full py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">달력에 반영</button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -910,7 +957,7 @@
                                         <div className="p-8 border-t bg-slate-50/50 space-y-3">
                                             {currentItem && (
                                                 <button onClick={async () => {
-                                                    if(confirm("이 수업을 오늘 일정에서 삭제하시겠습니까? (겹쳐있던 다른 수업은 보존됩니다)")) {
+                                                    if(confirm("일정 삭제 (기존 전담은 복구됨)")) {
                                                         const existing = overrides[selectedCell] || {};
                                                         if (activeMoveItem === 'base') await saveData('overrides', selectedCell, { ...existing, hideBase: true });
                                                         else {
@@ -920,9 +967,9 @@
                                                         }
                                                         setIsSidebarOpen(false);
                                                     }
-                                                }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl hover:bg-rose-50 border border-rose-100 flex items-center justify-center gap-2 leading-none text-[12px] uppercase tracking-widest">오늘 일정에서 삭제</button>
+                                                }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl border border-rose-100 text-[12px] uppercase tracking-widest">삭제</button>
                                             )}
-                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-4 bg-slate-200 text-slate-500 font-black rounded-2xl transition-all text-[12px] uppercase tracking-widest leading-none">Close Editor</button>
+                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-4 bg-slate-200 text-slate-500 font-black rounded-2xl text-[12px] uppercase tracking-widest">닫기</button>
                                         </div>
                                     </>
                                 );
@@ -932,7 +979,7 @@
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-[110] border border-white/10 opacity-90 scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.8 Precision Engine Ready</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.9 Precision Engine Ready</span>
                     </div>
                 </div>
             );
