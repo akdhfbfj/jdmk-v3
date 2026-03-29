@@ -516,7 +516,7 @@
                                                                         <td key={cls} className={`p-2 border-r last:border-0 align-middle min-h-[110px] relative transition-all bg-white`}>
                                                                             {cell.isConflict ? (
                                                                                 <div className="flex h-full min-h-[90px] gap-1 animate-in">
-                                                                                    {/* 전담 칸도 붉은 테두리 복구 */}
+                                                                                    {/* 전담 칸 붉은 테두리 유지 */}
                                                                                     <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} 
                                                                                         className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} border border-rose-300 conflict-glow shadow-md opacity-80`}>
                                                                                         <span className="text-[9px] font-black opacity-40 mb-1 uppercase">전담</span>
@@ -532,7 +532,10 @@
                                                                             ) : cell.override || cell.base ? (
                                                                                 <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsSidebarOpen(true); }} 
                                                                                     className={`h-full min-h-[90px] flex flex-col justify-center items-center p-4 rounded-3xl cursor-pointer hover:brightness-95 transition-all border shadow-sm ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text} ${(cell.override ? specOverride : specBase)?.border}`}>
-                                                                                    <div className="text-[11px] font-black opacity-30 uppercase tracking-widest mb-1">{cell.override ? '강사' : '전담'}</div>
+                                                                                    {/* 레이블 표시 로직 수정: 교체 데이터의 타입이 external이면 강사, 그 외는 전담 */}
+                                                                                    <div className="text-[11px] font-black opacity-30 uppercase tracking-widest mb-1">
+                                                                                        {cell.override ? (cell.override.type === 'external' ? '강사' : '전담') : '전담'}
+                                                                                    </div>
                                                                                     <div className="text-[15px] font-black leading-none italic tracking-tighter">{(cell.override ? cell.override.title : null) || (cell.override ? specOverride : specBase)?.name}</div>
                                                                                 </div>
                                                                             ) : (
@@ -1015,7 +1018,8 @@
                                                                 <div className="space-y-4 animate-in">
                                                                     <input type="text" placeholder="수업명" id="new-custom-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none" />
                                                                     <select id="new-custom-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
-                                                                        {SPECIALISTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                                        {/* 일반 등록 목록에서 영어/과학/체육 제외하고 외부강사만 표시 */}
+                                                                        {SPECIALISTS.filter(s => s.id === 'external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
                                                                     <button onClick={async () => {
                                                                         const title = document.getElementById('new-custom-title').value;
