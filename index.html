@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V6.2 - 통합 시수 & 학사 관리 시스템</title>
+    <title>전담 마크 Pro V6.3 - 통합 시수 & 학사 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, Timestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, Timestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore as getFS, doc as getD, setDoc as setD, getDoc as getDocD, collection as collD, onSnapshot as onS, deleteDoc as delD, Timestamp as TS, query as qD, orderBy as obD, limit as limD } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyBWxSDDYkOtaZI9dByQ85A0izlrCmHEoIQ",
@@ -31,10 +32,10 @@
         try {
             const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
-            const db = getFirestore(app);
+            const db = getFS(app);
             const appId = 'jdmk-v5-final'; 
 
-            window.fb = { auth, db, appId, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, Timestamp, signInAnonymously, onAuthStateChanged, query, orderBy, limit };
+            window.fb = { auth, db, appId, doc: getD, setDoc: setD, getDoc: getDocD, collection: collD, onSnapshot: onS, deleteDoc: delD, Timestamp: TS, signInAnonymously, onAuthStateChanged, query: qD, orderBy: obD, limit: limD };
             window.fbReady = true; 
         } catch (e) {
             window.fbError = e.message;
@@ -64,7 +65,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V6.2 최적화 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V6.3 초정밀 보정 중...</p>
         </div>
     </div>
 
@@ -105,7 +106,7 @@
             
             const [activeTab, setActiveTab] = useState('academic'); 
             const [viewMode, setViewMode] = useState('weekly'); 
-            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+            const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD 안전 보장
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [selectedCell, setSelectedCell] = useState(null);
             
@@ -159,13 +160,16 @@
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id), { ...data, updatedAt: Timestamp.now() });
             };
 
-            // 월요일 계산 로직 수정 (팝업 달력 선택 시 주간 날짜 꼬임 해결)
-            const getMonday = (d) => {
-                const date = new Date(d + 'T00:00:00');
+            // 타임존 오류 없는 날짜 계산 로직
+            const getMonday = (dateStr) => {
+                const date = new Date(dateStr + 'T00:00:00');
                 const day = date.getDay(); // 0(일) ~ 6(토)
                 const diff = date.getDate() - day + (day === 0 ? -6 : 1);
                 const monday = new Date(date.setDate(diff));
-                return monday.toISOString().split('T')[0];
+                const y = monday.getFullYear();
+                const m = String(monday.getMonth() + 1).padStart(2, '0');
+                const d = String(monday.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
             };
 
             const getCellData = (dateStr, period, classLabel) => {
@@ -195,13 +199,18 @@
                     let s = d.trim().replace(/\//g, '.');
                     if (!s) return null;
                     const parts = s.split('.');
+                    let formatted = "";
                     if (parts.length === 2) {
-                        s = `${currentYear}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                        formatted = `${currentYear}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                     } else if (parts.length === 3) {
-                        s = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                        formatted = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
                     }
-                    const date = new Date(s + 'T00:00:00');
-                    return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+                    const date = new Date(formatted + 'T00:00:00');
+                    if (isNaN(date.getTime())) return null;
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d_ = String(date.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d_}`;
                 }).filter(d => d);
             };
 
@@ -236,7 +245,7 @@
                     <header className="bg-white border-b px-4 py-1.5 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-1.5 rounded-lg text-white shadow-md"><SafeIcon name="ClipboardCheck" size={16} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V6.2 Final</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V6.3</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-0.5 rounded-xl">
                             {[
@@ -262,17 +271,17 @@
                                             <button onClick={() => { 
                                                 const d = new Date(selectedDate + 'T00:00:00'); 
                                                 d.setDate(d.getDate() - (viewMode === 'weekly' ? 7 : 1)); 
-                                                setSelectedDate(d.toISOString().split('T')[0]); 
+                                                setSelectedDate(new Date(d).toLocaleDateString('en-CA')); 
                                             }} className="p-2 border rounded-xl hover:bg-slate-50 transition-all btn-press"><SafeIcon name="ChevronLeft" size={18} /></button>
                                             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="font-black text-slate-700 border-none bg-transparent focus:ring-0 cursor-pointer text-sm" />
                                             <button onClick={() => { 
                                                 const d = new Date(selectedDate + 'T00:00:00'); 
                                                 d.setDate(d.getDate() + (viewMode === 'weekly' ? 7 : 1)); 
-                                                setSelectedDate(d.toISOString().split('T')[0]); 
+                                                setSelectedDate(new Date(d).toLocaleDateString('en-CA')); 
                                             }} className="p-2 border rounded-xl hover:bg-slate-50 transition-all btn-press"><SafeIcon name="ChevronRight" size={18} /></button>
                                         </div>
                                         <div className="h-6 w-px bg-slate-200 hidden md:block mx-2"></div>
-                                        <button onClick={() => { alert("클라우드 시간표를 최신 상태로 동기화했습니다."); window.location.reload(); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[11px] hover:bg-indigo-100 transition-all btn-press shadow-sm">
+                                        <button onClick={() => { alert("달력을 최신 데이터로 업데이트했습니다."); window.location.reload(); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[11px] hover:bg-indigo-100 transition-all btn-press shadow-sm">
                                             <SafeIcon name="RefreshCw" size={14} /> 전담 시간표 반영
                                         </button>
                                     </div>
@@ -294,8 +303,8 @@
                                                         return DAYS.map((d, i) => {
                                                             const colDate = new Date(mondayStr + 'T00:00:00');
                                                             colDate.setDate(colDate.getDate() + i);
-                                                            const dateStr = colDate.toISOString().split('T')[0];
-                                                            const isToday = dateStr === new Date().toISOString().split('T')[0];
+                                                            const dateStr = new Date(colDate).toLocaleDateString('en-CA');
+                                                            const isToday = dateStr === new Date().toLocaleDateString('en-CA');
                                                             return <th key={i} className={`p-4 border-r min-w-[150px] ${isToday ? 'bg-indigo-50/30' : ''}`}>
                                                                 <div className="text-[10px] text-slate-300 font-bold">{dateStr.split('-').slice(1).join('.')}</div>
                                                                 <div className={`font-black text-sm ${isToday ? 'text-indigo-600' : 'text-slate-700'}`}>{d}요일</div>
@@ -313,7 +322,7 @@
                                                             return DAYS.map((_, i) => {
                                                                 const colDate = new Date(mondayStr + 'T00:00:00');
                                                                 colDate.setDate(colDate.getDate() + i);
-                                                                const dateStr = colDate.toISOString().split('T')[0];
+                                                                const dateStr = new Date(colDate).toLocaleDateString('en-CA');
                                                                 return <td key={i} className="p-1.5 border-r last:border-0 align-top h-24">
                                                                     <div className="space-y-1">
                                                                         {TARGET_CLASSES.map(cls => {
@@ -321,7 +330,7 @@
                                                                             const spec = SPECIALISTS.find(s => s.id === data?.type);
                                                                             if (!spec) return null;
                                                                             return <div key={cls} onClick={() => { setSelectedCell(`${dateStr}-${p}-${cls}`); setIsModalOpen(true); }} className={`p-1.5 rounded-xl border text-[9px] font-bold truncate flex items-center justify-between cursor-pointer transition-all hover:brightness-95 ${spec.bg} ${spec.text} ${spec.border} shadow-sm`}>
-                                                                                <span>{cls}: {spec.name}</span>
+                                                                                <span>{cls}: {data.title || spec.name}</span>
                                                                                 {data.isConflict && <SafeIcon name="AlertTriangle" size={10} className="text-rose-500" />}
                                                                             </div>;
                                                                         })}
@@ -354,8 +363,8 @@
                                                                 {data?.isConflict && <div className="absolute top-1 right-1 text-rose-500 animate-pulse"><SafeIcon name="AlertTriangle" size={12}/></div>}
                                                                 {spec ? (
                                                                     <div className="h-full flex flex-col justify-center">
-                                                                        <div className={`text-[14px] font-black ${spec.text}`}>{spec.name}</div>
-                                                                        {data.title && <div className="text-[10px] font-bold text-slate-400 truncate mt-1 italic leading-none">{data.title}</div>}
+                                                                        <div className={`text-[14px] font-black ${spec.text}`}>{data.title || spec.name}</div>
+                                                                        {data.title && <div className="text-[10px] font-bold text-slate-400 truncate mt-1 italic leading-none">{spec.name}</div>}
                                                                         {data.status === 'held' && <div className="mt-2 text-indigo-600"><SafeIcon name="CheckCircle2" size={14}/></div>}
                                                                     </div>
                                                                 ) : (
@@ -385,7 +394,7 @@
                                                 for(let i=1; i<=totalDays; i++) {
                                                     const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                                                     const dayOfWeek = new Date(dateStr + 'T00:00:00').getDay();
-                                                    const isToday = dateStr === new Date().toISOString().split('T')[0];
+                                                    const isToday = dateStr === new Date().toLocaleDateString('en-CA');
                                                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                                     const lessons = [];
                                                     TARGET_CLASSES.forEach(cls => {
@@ -427,7 +436,7 @@
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest">수업명</label>
-                                                <input type="text" value={instTitle} onChange={e => setInstTitle(e.target.value)} placeholder="수업제목" className="w-full p-3.5 rounded-2xl bg-white/10 border-none text-white placeholder-white/30 font-black focus:bg-white focus:text-slate-800 text-[13px] outline-none transition-all shadow-inner" />
+                                                <input type="text" value={instTitle} onChange={e => setInstTitle(e.target.value)} placeholder="예: 창체 한자" className="w-full p-3.5 rounded-2xl bg-white/10 border-none text-white placeholder-white/30 font-black focus:bg-white focus:text-slate-800 text-[13px] outline-none transition-all shadow-inner" />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest">대상 반</label>
@@ -450,13 +459,12 @@
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[11px] font-black opacity-60 ml-1 uppercase italic tracking-widest">날짜 입력 (예: 3/20, 3.27, 2026.4.10 등)</label>
+                                            <label className="text-[11px] font-black opacity-60 ml-1 uppercase italic tracking-widest">날짜 입력 (예: 3/30, 4.15, 2026.5.20 등)</label>
                                             <textarea value={instDates} onChange={e => setInstDates(e.target.value)} placeholder="쉼표나 엔터로 구분해 여러 날짜를 입력하세요." className="w-full p-5 rounded-[2rem] bg-white/10 border-none text-white placeholder-white/30 font-black min-h-[120px] focus:bg-white focus:text-slate-800 text-[13px] outline-none transition-all shadow-inner"></textarea>
                                         </div>
                                         <button onClick={async () => {
                                             const dates = parseSmartDates(instDates);
-                                            if(!instTitle || dates.length === 0) return alert("수업명과 유효한 날짜(예: 3/30)를 확인하세요.");
-                                            if(instStart > instEnd) return alert("교시 설정이 올바르지 않습니다.");
+                                            if(!instTitle || dates.length === 0) return alert("수업명과 유효한 날짜를 확인하세요.");
                                             setIsSaving(true);
                                             try {
                                                 for(const d of dates) {
@@ -467,11 +475,11 @@
                                                         }
                                                     }
                                                 }
-                                                alert("달력에 성공적으로 반영되었습니다!"); setInstTitle(""); setInstDates("");
+                                                alert("달력에 성공적으로 반영되었습니다!"); setActiveTab('academic'); setInstTitle(""); setInstDates("");
                                             } catch (e) { alert("오류 발생: " + e.message); }
                                             setIsSaving(false);
                                         }} disabled={isSaving} className="w-full py-5 bg-white text-amber-600 font-black rounded-[2rem] shadow-xl transition-all active:scale-[0.98] text-[16px] tracking-widest hover:bg-amber-50 btn-press">
-                                            {isSaving ? 'Synching...' : '달력에 반영'}
+                                            {isSaving ? '반영 중...' : '달력에 반영'}
                                         </button>
                                     </div>
                                 </div>
@@ -480,13 +488,7 @@
                                     <div className="space-y-4 max-h-[450px] overflow-y-auto custom-scrollbar pr-2">
                                         {recentInstructorLessons.map(lesson => (
                                             <div key={lesson.key} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group border border-transparent hover:border-amber-100 transition-all shadow-sm">
-                                                <div onClick={() => {
-                                                    setInstTitle(lesson.title); setInstClass(lesson.classLabel);
-                                                    setInstDates(lesson.key.split('-').slice(0,3).join('.'));
-                                                    setInstStart(parseInt(lesson.key.split('-')[3]) || 1);
-                                                    setInstEnd(parseInt(lesson.key.split('-')[3]) || 1);
-                                                    alert("수업 정보를 입력창으로 불러왔습니다.");
-                                                }} className="cursor-pointer flex-1">
+                                                <div className="cursor-pointer flex-1">
                                                     <div className="text-[12px] font-black text-slate-800 truncate max-w-[160px]">{lesson.title}</div>
                                                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{lesson.key.split('-').slice(0,3).join('.')} | {lesson.classLabel}</div>
                                                 </div>
@@ -523,7 +525,9 @@
                                                     .filter(key => key.endsWith(`-${selectedSpec}`) && !editingSchedule[key])
                                                     .map(key => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'base', key)));
                                                 await Promise.all([...savePromises, ...deletePromises]);
-                                                alert("클라우드 저장 및 달력 반영 완료!"); setBaseSchedule(editingSchedule);
+                                                alert("기본 시간표가 저장되었습니다. 학사 일정 탭에서 확인하세요!"); 
+                                                setBaseSchedule(editingSchedule);
+                                                setActiveTab('academic');
                                             } catch(e) { alert("저장 실패: " + e.message); }
                                             setIsSaving(false);
                                         }} disabled={isSaving || selectedSpec === 'all'} className={`px-6 py-3.5 bg-white text-indigo-600 rounded-[1.5rem] font-black text-xs shadow-xl transition-all btn-press flex items-center gap-2 ${selectedSpec === 'all' ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:scale-105'}`}>
@@ -565,7 +569,6 @@
                                                                                 {SPECIALISTS.find(s=>s.id===item.type)?.name}: {item.classLabel}
                                                                             </div>
                                                                         ))}
-                                                                        {cellItems.length === 0 && <div className="h-full flex items-center justify-center text-slate-100 italic text-[10px]">Empty</div>}
                                                                     </div>
                                                                 </td>
                                                             );
@@ -581,8 +584,8 @@
                                                                         } else if (quickClass.trim() !== "") {
                                                                             setEditingSchedule({...editingSchedule, [key]: { type: selectedSpec, classLabel: quickClass, dayIdx: dIdx, period: p }});
                                                                         }
-                                                                    }} className={`w-full p-3 border-2 border-dashed rounded-[2.5rem] transition-all flex flex-col items-center justify-center min-h-[95px] ${item ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner active:scale-95' : 'border-slate-50 text-slate-50 hover:border-indigo-100 hover:text-indigo-100 active:scale-95'}`}>
-                                                                        {item ? <span className="text-[17px] tracking-tighter leading-none">{item.classLabel}</span> : <div className="flex flex-col items-center opacity-40"><SafeIcon name="Plus" size={28} />{others.length > 0 && <span className="text-[9px] font-black mt-1 text-slate-300">({others.length}개 중첩)</span>}</div>}
+                                                                    }} className={`w-full p-3 border-2 border-dashed rounded-[2.5rem] transition-all flex flex-col items-center justify-center min-h-[95px] ${item ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner active:scale-95' : 'border-slate-50 text-slate-200 hover:border-indigo-100 active:scale-95'}`}>
+                                                                        {item ? <span className="text-[17px] tracking-tighter leading-none">{item.classLabel}</span> : <div className="flex flex-col items-center opacity-40"><SafeIcon name="Plus" size={28} />{others.length > 0 && <span className="text-[9px] font-black mt-1 text-slate-300">({others.length}개 중합)</span>}</div>}
                                                                     </button>
                                                                 </td>
                                                             );
@@ -686,7 +689,7 @@
 
                     <div className="fixed bottom-8 right-8 flex items-center gap-3 bg-slate-900 text-white px-6 py-3.5 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-90 hover:opacity-100 transition-opacity scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[11px] font-black tracking-widest uppercase leading-none italic">Cloud Sync Engine V6.2</span>
+                        <span className="text-[11px] font-black tracking-widest uppercase leading-none italic">Cloud Sync Engine V6.3</span>
                     </div>
                 </div>
             );
