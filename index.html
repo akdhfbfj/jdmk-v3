@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V8.6 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V8.7 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -68,9 +68,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 
-        @keyframes pulse-ghost { 0% { opacity: 0.3; } 50% { opacity: 0.6; } 100% { opacity: 0.3; } }
-        .ghost-preview { animation: pulse-ghost 1.5s infinite; pointer-events: none; }
-
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #e2e8f0; border: 1px solid #e2e8f0; border-radius: 1.5rem; overflow: hidden; }
         .calendar-day { background: white; min-height: 120px; padding: 10px; transition: background 0.2s; }
         .calendar-day.outside { background: #f1f5f9; color: #cbd5e1; }
@@ -85,7 +82,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.6 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.7 로딩 중...</p>
         </div>
     </div>
 
@@ -116,25 +113,11 @@
             { id: 'external', name: '외부강사', color: 'bg-amber-600', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' }
         ];
 
-        // 2026년 대한민국 공휴일 데이터
         const HOLIDAYS_2026 = {
-            '2026-01-01': '신정',
-            '2026-02-16': '설날 연휴',
-            '2026-02-17': '설날',
-            '2026-02-18': '설날 연휴',
-            '2026-03-01': '삼일절',
-            '2026-03-02': '대체공휴일',
-            '2026-05-05': '어린이날',
-            '2026-05-24': '부처님오신날',
-            '2026-05-25': '대체공휴일',
-            '2026-06-06': '현충일',
-            '2026-08-15': '광복절',
-            '2026-09-24': '추석 연휴',
-            '2026-09-25': '추석',
-            '2026-09-26': '추석 연휴',
-            '2026-10-03': '개천절',
-            '2026-10-09': '한글날',
-            '2026-12-25': '성탄절'
+            '2026-01-01': '신정', '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴',
+            '2026-03-01': '삼일절', '2026-03-02': '대체공휴일', '2026-05-05': '어린이날', '2026-05-24': '부처님오신날',
+            '2026-05-25': '대체공휴일', '2026-06-06': '현충일', '2026-08-15': '광복절', '2026-09-24': '추석 연휴',
+            '2026-09-25': '추석', '2026-09-26': '추석 연휴', '2026-10-03': '개천절', '2026-10-09': '한글날', '2026-12-25': '성탄절'
         };
 
         function App() {
@@ -153,6 +136,10 @@
             const [selectedCell, setSelectedCell] = useState(null);
             const [isSaving, setIsSaving] = useState(false);
 
+            // 시수 통계용 검색어
+            const [statSearch, setStatSearch] = useState("");
+
+            // 이동/조정용
             const [moveDate, setMoveDate] = useState("");
             const [movePeriod, setMovePeriod] = useState(1);
             const [activeMoveItem, setActiveMoveItem] = useState(null); 
@@ -163,8 +150,6 @@
             const [instClass, setInstClass] = useState("5-1");
             const [instStart, setInstStart] = useState(1);
             const [instEnd, setInstEnd] = useState(1);
-
-            const [searchQuery, setSearchQuery] = useState("");
 
             const [fixedSpec, setFixedSpec] = useState("english");
             const [fixedClass, setFixedClass] = useState("5-1");
@@ -206,6 +191,7 @@
                     onSnapshot(path('overrides'), (s) => {
                         const d = {}; s.docs.forEach(doc => d[doc.id] = doc.data());
                         setOverrides(d);
+                        setLoading(false);
                     }),
                     onSnapshot(path('academic'), (s) => {
                         const d = {};
@@ -215,7 +201,6 @@
                             else d[doc.id] = doc.data();
                         });
                         setAcademicEvents(d);
-                        setIsLoading(false);
                     })
                 ];
                 return () => unsubs.forEach(u => u());
@@ -231,23 +216,13 @@
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id));
             };
 
-            const getMonday = (dateStr) => {
-                const date = new Date(dateStr + 'T00:00:00');
-                const day = date.getDay();
-                const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-                const monday = new Date(date.setDate(diff));
-                return monday.toLocaleDateString('en-CA');
-            };
-
-            // 8.6 지능형 셀 데이터 추출기 (공휴일/학사일정 통합)
+            // V8.7 핵심 데이터 추출기: 전담 숨김(hideBase)과 강사 데이터(type)를 분리 인지
             const getCellData = (dateStr, period, classLabel) => {
                 const overrideKey = `${dateStr}-${period}-${classLabel}`;
                 const date = new Date(dateStr + 'T00:00:00'); 
                 const dayIdx = (date.getDay() + 6) % 7; 
 
-                // 1. 공휴일 체크
                 if (HOLIDAYS_2026[dateStr]) return { type: 'holiday', title: HOLIDAYS_2026[dateStr], isHoliday: true };
-                // 2. 학사 일정 체크
                 if (academicEvents[dateStr]?.isHoliday) return { type: 'holiday', title: academicEvents[dateStr].title, isHoliday: true };
 
                 const override = overrides[overrideKey];
@@ -256,14 +231,15 @@
                 );
                 const baseMatch = baseMatchEntry ? { id: baseMatchEntry[0], ...baseMatchEntry[1] } : null;
 
-                if (override && override.type === 'none') {
-                    return { override: null, base: null, isConflict: false, isManuallyDeleted: true };
-                }
-                
+                // override가 강사 데이터를 갖고 있는지 확인
+                const hasInstructor = override && override.type && override.type !== 'none';
+                // override가 마스터를 숨기고 있는지 확인
+                const hideBase = override && override.hideBase;
+
                 return {
-                    override: override || null,
-                    base: baseMatch,
-                    isConflict: !!(override && baseMatch)
+                    override: hasInstructor ? override : null,
+                    base: (baseMatch && !hideBase) ? baseMatch : null,
+                    isConflict: !!(hasInstructor && baseMatch && !hideBase)
                 };
             };
 
@@ -275,27 +251,24 @@
                         s2: { english: 0, science: 0, pe: 0, external: 0, history: [] }
                     };
                 });
-
                 const countOccurrences = (start, end, semester) => {
                     let curr = new Date(start + 'T00:00:00');
                     const stop = new Date(end + 'T00:00:00');
                     while (curr <= stop) {
                         const dStr = curr.toLocaleDateString('en-CA');
-                        // 공휴일이나 휴업일은 시수 카운트에서 제외
                         if (!HOLIDAYS_2026[dStr] && !academicEvents[dStr]?.isHoliday) {
                             const dayIdx = (curr.getDay() + 6) % 7;
                             if (dayIdx < 5) {
                                 currentGradeClasses.forEach(cls => {
                                     PERIODS.forEach(p => {
                                         const data = getCellData(dStr, p, cls);
-                                        if (data.override && data.override.type !== 'none') {
+                                        if (data.override) {
                                             res[cls][semester][data.override.type]++;
                                             if (data.override.type === 'external') {
                                                 res[cls][semester].history.push({ date: dStr.replace(/-/g, '.'), period: p, title: data.override.title });
                                             }
-                                        } else if (data.base) {
-                                            res[cls][semester][data.base.type]++;
                                         }
+                                        if (data.base) res[cls][semester][data.base.type]++;
                                     });
                                 });
                             }
@@ -314,21 +287,9 @@
                 return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2,'0')}월 ${String(date.getDate()).padStart(2,'0')}일 (${week}요일)`;
             };
 
-            const getActiveSidebarItem = () => {
-                if (!selectedCell) return null;
-                const parts = selectedCell.split('-');
-                const d = `${parts[0]}-${parts[1]}-${parts[2]}`;
-                const p = parseInt(parts[3]);
-                const c = parts.slice(4).join('-');
-                const cell = getCellData(d, p, c);
-                return activeMoveItem === 'base' ? cell.base : (cell.override || cell.base);
-            };
-
             const adjustDate = (dateStr, direction) => {
                 let d = new Date(dateStr + 'T00:00:00');
-                do {
-                    d.setDate(d.getDate() + direction);
-                } while (d.getDay() === 0 || d.getDay() === 6);
+                do { d.setDate(d.getDate() + direction); } while (d.getDay() === 0 || d.getDay() === 6);
                 setSelectedDate(d.toLocaleDateString('en-CA'));
             };
 
@@ -339,7 +300,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.6 Pro</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.7 Pro</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -348,7 +309,7 @@
                                 { id: 'config', label: '설정/마스터 시간표', icon: 'Settings' },
                                 { id: 'stats', label: '시수 통계', icon: 'BarChart3' },
                             ].map(tab => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <SafeIcon name={tab.icon} size={14} /> {tab.label}
                                 </button>
                             ))}
@@ -417,10 +378,9 @@
                                                             const mondayStr = getMonday(selectedDate);
                                                             const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
                                                             const dateStr = colDate.toLocaleDateString('en-CA');
-                                                            const cellData = getCellData(dateStr, p, currentGradeClasses[0]); // 대표 체크용
-                                                            
-                                                            return <td key={i} className={`p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all ${cellData.type === 'holiday' ? 'holiday-bg' : ''}`}>
-                                                                {cellData.type === 'holiday' ? (
+                                                            const cellData = getCellData(dateStr, p, currentGradeClasses[0]);
+                                                            return <td key={i} className={`p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all ${cellData.isHoliday ? 'holiday-bg' : ''}`}>
+                                                                {cellData.isHoliday ? (
                                                                     <div className="h-full flex flex-col justify-center items-center opacity-40">
                                                                         <SafeIcon name="Flag" size={14} className="holiday-text mb-1" />
                                                                         <span className="text-[10px] font-black holiday-text">{cellData.title}</span>
@@ -493,7 +453,6 @@
                                                             <div className="h-[400px] flex flex-col justify-center items-center text-rose-300">
                                                                 <SafeIcon name="Flag" size={48} className="mb-4 opacity-20" />
                                                                 <p className="font-black italic text-lg">{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate].title}</p>
-                                                                <p className="text-[10px] font-bold mt-2">학교를 가지 않는 날입니다.</p>
                                                             </div>
                                                         ) : PERIODS.map(p => {
                                                             const cell = getCellData(selectedDate, p, cls);
@@ -518,7 +477,6 @@
                                                                     ) : cell.override || cell.base ? (
                                                                         <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsSidebarOpen(true); }} className={`w-full flex flex-col justify-center items-center p-4 cursor-pointer hover:brightness-95 transition-all ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text}`}>
                                                                             <div className="text-[14px] font-black">{(cell.override ? cell.override.title : null) || (cell.override ? specOverride : specBase)?.name}</div>
-                                                                            {(cell.override?.title) && <div className="text-[9px] font-bold opacity-70 mt-1 uppercase tracking-tighter">{(cell.override ? specOverride : specBase)?.name}</div>}
                                                                         </div>
                                                                     ) : (
                                                                         <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(null); setIsSidebarOpen(true); }} className="w-full flex justify-center items-center opacity-10 cursor-pointer hover:opacity-30 transition-all"><SafeIcon name="Plus" size={20} /></div>
@@ -579,7 +537,8 @@
                                             try {
                                                 for(const d of dates) {
                                                     for(let i = instStart; i <= instEnd; i++) {
-                                                        await saveData('overrides', `${d}-${i}-${instClass}`, { title: instTitle, type: 'external', status: 'held', classLabel: instClass });
+                                                        const existing = overrides[`${d}-${i}-${instClass}`] || {};
+                                                        await saveData('overrides', `${d}-${i}-${instClass}`, { ...existing, title: instTitle, type: 'external', status: 'held', classLabel: instClass });
                                                     }
                                                 }
                                                 alert("반영 완료!");
@@ -597,10 +556,18 @@
                                                     <div className="text-[12px] font-black text-slate-800 truncate leading-none">{v.title}</div>
                                                     <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-tighter leading-none">{key.split('-').slice(0,3).join('.')} ({key.split('-')[3]}교시, {v.classLabel})</div>
                                                 </div>
-                                                <button onClick={async () => { if(confirm("해당 수업을 삭제할까요?")) await deleteData('overrides', key); }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2 bg-white rounded-lg shadow-sm border border-slate-100"><SafeIcon name="Trash2" size={14}/></button>
+                                                <button onClick={async () => { 
+                                                    if(confirm("해당 강사 수업만 삭제할까요? (전담이 겹쳐있었다면 전담은 복구됩니다)")) {
+                                                        const existing = overrides[key];
+                                                        if (existing.hideBase) {
+                                                            await saveData('overrides', key, { hideBase: true });
+                                                        } else {
+                                                            await deleteData('overrides', key);
+                                                        }
+                                                    }
+                                                }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2 bg-white rounded-lg shadow-sm border border-slate-100"><SafeIcon name="Trash2" size={14}/></button>
                                             </div>
                                         ))}
-                                        {Object.entries(overrides).filter(([k,v]) => v.type === 'external').length === 0 && <div className="py-20 text-center text-slate-300 font-black italic text-xs">내역 없음</div>}
                                     </div>
                                 </div>
                             </div>
@@ -655,8 +622,8 @@
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[3rem] border border-slate-200 overflow-hidden shadow-sm">
-                                    <div className="p-8 border-b bg-slate-50 flex items-center justify-between">
+                                <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm">
+                                    <div className="p-8 border-b bg-slate-50">
                                         <h4 className="text-lg font-black text-slate-800 italic uppercase tracking-tighter flex items-center gap-2"><SafeIcon name="Table" className="text-indigo-500"/> 전담 마스터 시간표 원부 관리</h4>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -697,63 +664,6 @@
                                         </table>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
-                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
-                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 및 목표 시수 설정</h4>
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400">1학기 시작</label>
-                                                    <input type="date" value={semesterConfig.s1Start} onChange={e => setSemesterConfig({...semesterConfig, s1Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400">1학기 종료</label>
-                                                    <input type="date" value={semesterConfig.s1End} onChange={e => setSemesterConfig({...semesterConfig, s1End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                {SPECIALISTS.map(s => (
-                                                    <div key={s.id} className="space-y-1">
-                                                        <label className="text-[10px] font-black text-slate-400">{s.name} 목표</label>
-                                                        <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value)})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <button onClick={async () => {
-                                                await saveData('academic', 'semesters', semesterConfig);
-                                                await saveData('academic', 'targets', targetHours);
-                                                alert("설정 저장 완료!");
-                                            }} className="w-full py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black shadow-lg hover:bg-indigo-700 transition-all">설정 데이터 저장</button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
-                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="AlertTriangle" className="text-rose-500"/> 학사 일정(휴업일) 등록</h4>
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <input type="date" id="event-date" defaultValue={selectedDate} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                <input type="text" id="event-title" placeholder="예: 재량휴업일" className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                            </div>
-                                            <button onClick={async () => {
-                                                const d = document.getElementById('event-date').value;
-                                                const t = document.getElementById('event-title').value;
-                                                if(!d || !t) return alert("날짜와 행사명을 입력하세요.");
-                                                await saveData('academic', d, { title: t, isHoliday: true });
-                                                alert("일정 등록 완료!");
-                                            }} className="w-full py-4 bg-rose-500 text-white rounded-[1.5rem] font-black shadow-lg">휴업 일정 추가</button>
-                                            <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 mt-4 bg-slate-50 p-2 rounded-2xl">
-                                                {Object.entries(academicEvents).sort().map(([k,v]) => (
-                                                    <div key={k} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl text-[11px] font-bold">
-                                                        <span>{k} : {v.title}</span>
-                                                        <button onClick={() => deleteData('academic', k)} className="text-rose-400 p-1 hover:bg-rose-50 rounded-lg"><SafeIcon name="X" size={14}/></button>
-                                                    </div>
-                                                ))}
-                                                {Object.keys(academicEvents).length === 0 && <div className="text-center py-5 text-slate-300 font-black italic text-[10px]">등록된 일정 없음</div>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         )}
 
@@ -761,47 +671,65 @@
                             <div className="space-y-12 animate-in">
                                 {Object.keys(stats).map(cls => (
                                     <div key={cls} className="bg-white p-10 rounded-[4rem] border border-slate-200 shadow-sm space-y-12">
-                                        <h3 className="text-3xl font-black flex justify-between items-center text-slate-800 tracking-tighter uppercase italic leading-none">5학년 {cls} 시수 분석 <SafeIcon name="BarChart3" size={32} className="text-indigo-200"/></h3>
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-3xl font-black text-slate-800 tracking-tighter uppercase italic leading-none">5학년 {cls} 시수 분석</h3>
+                                            <div className="relative">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="강사 수업 검색..." 
+                                                    value={statSearch}
+                                                    onChange={(e) => setStatSearch(e.target.value)}
+                                                    className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all w-[250px]"
+                                                />
+                                                <SafeIcon name="Search" size={14} className="absolute left-4 top-2.5 text-slate-400" />
+                                            </div>
+                                        </div>
                                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-                                            {['s1', 's2'].map(sem => (
-                                                <div key={sem} className="space-y-8 p-8 bg-slate-50/50 rounded-[3rem] border border-slate-100 relative overflow-hidden">
-                                                    <div className="absolute top-4 right-6 text-[10px] font-black text-indigo-300 uppercase italic tracking-widest leading-none">{sem.toUpperCase()} Semester</div>
-                                                    <h4 className={`text-lg font-black italic leading-none ${sem === 's1' ? 'text-indigo-600' : 'text-rose-600'}`}>{sem === 's1' ? '1학기 이수 현황' : '2학기 이수 현황'}</h4>
-                                                    <div className="space-y-6">
-                                                        {SPECIALISTS.map(spec => {
-                                                            const count = stats[cls][sem][spec.id] || 0;
-                                                            const target = Math.round(targetHours[spec.id] / 2); 
-                                                            const percent = Math.min((count / (target||1)) * 100, 100).toFixed(0);
-                                                            return (
-                                                                <div key={spec.id} className="space-y-2">
-                                                                    <div className="flex justify-between items-end px-1 leading-none">
-                                                                        <span className="font-bold text-slate-500 text-xs">{spec.name}</span>
-                                                                        <span className="font-black text-slate-900 text-lg leading-none">{count} <span className="text-slate-300 font-bold text-[10px]">/ {target}</span></span>
+                                            {['s1', 's2'].map(sem => {
+                                                const filteredHistory = stats[cls][sem].history.filter(h => 
+                                                    h.title.toLowerCase().includes(statSearch.toLowerCase()) || 
+                                                    h.date.includes(statSearch)
+                                                );
+                                                return (
+                                                    <div key={sem} className="space-y-8 p-8 bg-slate-50/50 rounded-[3rem] border border-slate-100 relative overflow-hidden">
+                                                        <div className="absolute top-4 right-6 text-[10px] font-black text-indigo-300 uppercase italic tracking-widest leading-none">{sem.toUpperCase()} Semester</div>
+                                                        <h4 className={`text-lg font-black italic leading-none ${sem === 's1' ? 'text-indigo-600' : 'text-rose-600'}`}>{sem === 's1' ? '1학기 배정 현황' : '2학기 배정 현황'}</h4>
+                                                        <div className="space-y-6">
+                                                            {SPECIALISTS.map(spec => {
+                                                                const count = stats[cls][sem][spec.id] || 0;
+                                                                const target = Math.round(targetHours[spec.id] / 2); 
+                                                                const percent = Math.min((count / (target||1)) * 100, 100).toFixed(0);
+                                                                return (
+                                                                    <div key={spec.id} className="space-y-2">
+                                                                        <div className="flex justify-between items-end px-1 leading-none">
+                                                                            <span className="font-bold text-slate-500 text-xs">{spec.name}</span>
+                                                                            <span className="font-black text-slate-900 text-lg leading-none">{count} <span className="text-slate-300 font-bold text-[10px]">/ {target}</span></span>
+                                                                        </div>
+                                                                        <div className="h-3 bg-white rounded-full overflow-hidden border border-slate-50 shadow-inner">
+                                                                            <div className={`h-full ${spec.color} transition-all duration-1000 shadow-sm`} style={{ width: `${percent}%` }}></div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="h-3 bg-white rounded-full overflow-hidden border border-slate-100 shadow-inner">
-                                                                        <div className={`h-full ${spec.color} transition-all duration-1000 shadow-sm`} style={{ width: `${percent}%` }}></div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    {stats[cls][sem].history.length > 0 && (
-                                                        <div className="mt-8 pt-6 border-t border-slate-200">
-                                                            <h5 className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-1 mb-4"><SafeIcon name="List" size={14}/> 외부강사 상세 내역</h5>
-                                                            <div className="max-h-[150px] overflow-y-auto custom-scrollbar rounded-xl border border-slate-200 bg-white">
-                                                                <table className="excel-table">
-                                                                    <thead><tr><th>날짜</th><th>교시</th><th>수업명</th></tr></thead>
-                                                                    <tbody>
-                                                                        {stats[cls][sem].history.map((h, idx) => (
-                                                                            <tr key={idx}><td>{h.date}</td><td>{h.period}</td><td className="font-black text-indigo-600">{h.title}</td></tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
+                                                                );
+                                                            })}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                        {filteredHistory.length > 0 && (
+                                                            <div className="mt-8 pt-6 border-t border-slate-200">
+                                                                <h5 className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-1 mb-4"><SafeIcon name="List" size={14}/> 외부강사 상세 내역 {statSearch && '(필터링됨)'}</h5>
+                                                                <div className="max-h-[250px] overflow-y-auto custom-scrollbar rounded-xl border border-slate-200 bg-white">
+                                                                    <table className="excel-table">
+                                                                        <thead><tr><th>날짜</th><th>교시</th><th>수업명</th></tr></thead>
+                                                                        <tbody>
+                                                                            {filteredHistory.map((h, idx) => (
+                                                                                <tr key={idx}><td>{h.date}</td><td>{h.period}</td><td className="font-black text-indigo-600">{h.title}</td></tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 ))}
@@ -809,6 +737,7 @@
                         )}
                     </main>
 
+                    {/* V8.7 지능형 Lesson 사이드바 (레이어 보존 이동 엔진) */}
                     {isSidebarOpen && (
                         <div className="fixed top-0 right-0 z-[100] w-full max-w-md h-screen bg-white shadow-2xl sidebar-in sidebar-shadow flex flex-col border-l">
                             {(() => {
@@ -817,14 +746,16 @@
                                 const p = parseInt(parts[3]);
                                 const cls = parts.slice(4).join('-'); 
                                 const cellData = getCellData(dateStr, p, cls);
+                                
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
+                                
                                 const mD = moveDate || dateStr; const mP = movePeriod || p;
                                 
                                 const checkConflicts = () => {
                                     if (!currentItem) return null; 
                                     const targetCell = getCellData(mD, mP, cls);
-                                    if (targetCell.type === 'holiday') return { msg: '해당 날짜는 공휴일/휴업일로 지정되어 수업 배정이 불가능합니다.' };
-                                    if ((targetCell.override || targetCell.base) && (mD !== dateStr || mP !== p)) return { msg: `${cls}반 해당 시간에 이미 다른 수업이 있습니다.` };
+                                    if (targetCell.isHoliday) return { msg: '공휴일/휴업일에는 이동할 수 없습니다.' };
+                                    if ((targetCell.override || targetCell.base) && (mD !== dateStr || mP !== p)) return { msg: `${cls}반에 이미 다른 수업이 배정되어 있습니다.` };
                                     for (const otherCls of currentGradeClasses) {
                                         if (otherCls === cls && mD === dateStr && mP === p) continue; 
                                         const otherData = getCellData(mD, mP, otherCls);
@@ -841,18 +772,18 @@
                                     <>
                                         <div className="p-8 border-b bg-slate-50 flex justify-between items-start">
                                             <div className="space-y-2">
-                                                <h2 className="text-xl font-black text-slate-800 italic uppercase tracking-widest leading-none mt-2">Lesson <span className="text-indigo-600">Editor</span></h2>
+                                                <h2 className="text-xl font-black text-slate-800 italic uppercase leading-none tracking-widest mt-2">Lesson <span className="text-indigo-600">Editor</span></h2>
                                                 <div className="text-[12px] font-black text-slate-700 bg-white px-3 py-1.5 rounded-full border shadow-sm w-fit uppercase tracking-tighter leading-none mt-2">
                                                     {formatHeaderDate(dateStr)} / {p}교시
                                                 </div>
-                                                <div className="text-[12px] font-bold text-slate-400 ml-1 italic leading-none mt-2">{cls}반 - <span className="text-indigo-600 font-black">{currentSubjectName}</span></div>
+                                                <div className="text-[12px] font-bold text-slate-400 ml-1 italic mt-2">{cls}반 - <span className="text-indigo-600 font-black">{currentSubjectName}</span></div>
                                             </div>
                                             <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="p-2 hover:bg-slate-200 rounded-xl transition-all text-slate-400"><SafeIcon name="X" size={24}/></button>
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                                             <div className="space-y-4">
-                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Pinpoint Action</h3>
+                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Selective Move</h3>
                                                 <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
                                                     {currentItem ? (
                                                         <div className="space-y-4">
@@ -874,17 +805,32 @@
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex flex-col gap-2 p-5 rounded-2xl border bg-emerald-50/50 border-emerald-100 text-emerald-700 animate-in">
-                                                                    <div className="flex items-center gap-2"><SafeIcon name="CheckCircle2" size={16}/><span className="text-[11px] font-black uppercase italic leading-none">Safe to Move</span></div>
-                                                                    <p className="text-[10px] font-bold opacity-70 leading-relaxed italic">충돌이 없습니다. [달력 반영] 시 이 수업만 이동됩니다.</p>
+                                                                    <div className="flex items-center gap-2"><SafeIcon name="CheckCircle2" size={16}/><span className="text-[11px] font-black uppercase italic leading-none">Ready to Move</span></div>
+                                                                    <p className="text-[10px] font-bold opacity-70 italic leading-none">이 수업만 이동되며, 겹쳐있던 다른 수업은 보존됩니다.</p>
                                                                 </div>
                                                             )}
                                                             <button disabled={!!conflict} onClick={async () => {
                                                                     if(conflict) return;
                                                                     setIsSaving(true);
                                                                     try {
-                                                                        if (activeMoveItem === 'base') await saveData('overrides', selectedCell, { type: 'none', classLabel: cls });
-                                                                        else await deleteData('overrides', selectedCell);
-                                                                        await saveData('overrides', `${mD}-${mP}-${cls}`, { title: currentItem.title || "", type: currentItem.type, status: 'held', classLabel: cls });
+                                                                        const existingSource = overrides[selectedCell] || {};
+                                                                        const existingTarget = overrides[`${mD}-${mP}-${cls}`] || {};
+
+                                                                        // 1. 기존 자리 처리 (정밀하게 해당 아이템만 제거)
+                                                                        if (activeMoveItem === 'base') {
+                                                                            // 전담 이동 -> old 자리에 hideBase만 남김(또는 강사데이터 유지하며 hideBase 추가)
+                                                                            await saveData('overrides', selectedCell, { ...existingSource, hideBase: true });
+                                                                        } else {
+                                                                            // 강사 이동 -> old 자리의 강사데이터만 지우고 hideBase 정보는 유지
+                                                                            const { type, title, status, ...rest } = existingSource;
+                                                                            if (Object.keys(rest).length === 0) await deleteData('overrides', selectedCell);
+                                                                            else await saveData('overrides', selectedCell, rest);
+                                                                        }
+
+                                                                        // 2. 새 자리 처리 (해당 아이템만 덮어씀)
+                                                                        const newItem = { title: currentItem.title || "", type: currentItem.type, status: 'held', classLabel: cls };
+                                                                        await saveData('overrides', `${mD}-${mP}-${cls}`, { ...existingTarget, ...newItem });
+
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
                                                                     } catch(e) { alert("오류: " + e.message); }
                                                                     setIsSaving(false);
@@ -903,7 +849,8 @@
                                                                     </select>
                                                                     <button onClick={async () => {
                                                                         const type = document.getElementById('new-master-type').value;
-                                                                        await saveData('overrides', selectedCell, { type, status: 'held', classLabel: cls });
+                                                                        const existing = overrides[selectedCell] || {};
+                                                                        await saveData('overrides', selectedCell, { ...existing, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
                                                                     }} className="w-full py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">달력에 반영</button>
                                                                 </div>
@@ -917,7 +864,8 @@
                                                                         const title = document.getElementById('new-custom-title').value;
                                                                         const type = document.getElementById('new-custom-type').value;
                                                                         if(!title) return alert("수업명을 입력하세요.");
-                                                                        await saveData('overrides', selectedCell, { title, type, status: 'held', classLabel: cls });
+                                                                        const existing = overrides[selectedCell] || {};
+                                                                        await saveData('overrides', selectedCell, { ...existing, title, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
                                                                     }} className="w-full py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl hover:bg-black active:scale-95 transition-all">달력에 반영</button>
                                                                 </div>
@@ -931,9 +879,15 @@
                                         <div className="p-8 border-t bg-slate-50/50 space-y-3">
                                             {currentItem && (
                                                 <button onClick={async () => {
-                                                    if(confirm("이 수업을 오늘 일정에서 삭제하시겠습니까?")) {
-                                                        if (activeMoveItem === 'base') await saveData('overrides', selectedCell, { type: 'none', classLabel: cls });
-                                                        else await deleteData('overrides', selectedCell);
+                                                    if(confirm("이 수업을 오늘 일정에서 삭제하시겠습니까? (겹쳐있던 다른 수업은 보존됩니다)")) {
+                                                        const existing = overrides[selectedCell] || {};
+                                                        if (activeMoveItem === 'base') {
+                                                            await saveData('overrides', selectedCell, { ...existing, hideBase: true });
+                                                        } else {
+                                                            const { type, title, status, ...rest } = existing;
+                                                            if (Object.keys(rest).length === 0) await deleteData('overrides', selectedCell);
+                                                            else await saveData('overrides', selectedCell, rest);
+                                                        }
                                                         setIsSidebarOpen(false);
                                                     }
                                                 }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl hover:bg-rose-50 border border-rose-100 flex items-center justify-center gap-2 leading-none text-[12px] uppercase tracking-widest">오늘 일정에서 삭제</button>
@@ -948,7 +902,7 @@
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-[110] border border-white/10 opacity-90 scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.6 Precision Engine Ready</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.7 Precision Engine Active</span>
                     </div>
                 </div>
             );
