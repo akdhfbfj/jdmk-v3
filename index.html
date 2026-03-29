@@ -516,11 +516,13 @@
                                                                         <td key={cls} className={`p-2 border-r last:border-0 align-middle min-h-[110px] relative transition-all bg-white`}>
                                                                             {cell.isConflict ? (
                                                                                 <div className="flex h-full min-h-[90px] gap-1 animate-in">
+                                                                                    {/* 전담 칸도 붉은 테두리 복구 */}
                                                                                     <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} 
-                                                                                        className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} opacity-60 border border-transparent hover:border-indigo-200 shadow-sm`}>
+                                                                                        className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} border border-rose-300 conflict-glow shadow-md opacity-80`}>
                                                                                         <span className="text-[9px] font-black opacity-40 mb-1 uppercase">전담</span>
                                                                                         <span className="text-[11px] font-black">{specBase?.name}</span>
                                                                                     </div>
+                                                                                    {/* 강사 칸 붉은 테두리 유지 */}
                                                                                     <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsSidebarOpen(true); }} 
                                                                                         className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text} border border-rose-300 conflict-glow shadow-md`}>
                                                                                         <span className="text-[9px] font-black opacity-40 mb-1 uppercase">강사</span>
@@ -913,12 +915,15 @@
                                     const targetCellInfo = getCellData(mD, mP, cls);
                                     if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) return { msg: '학교 일정/방학에는 배정 불가' };
                                     
-                                    for (const otherCls of currentGradeClasses) {
-                                        if (otherCls === cls && mD === dateStr && mP === p) continue; 
-                                        const otherData = getCellData(mD, mP, otherCls);
-                                        const otherItem = otherData.override || otherData.base;
-                                        if (otherItem && otherItem.type === targetType) {
-                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 시간에 ${otherCls} 수업 중입니다.` };
+                                    // 외부강사가 아닌 경우에만 교사 중복 체크 (외부강사는 중복 허용)
+                                    if (targetType !== 'external') {
+                                        for (const otherCls of currentGradeClasses) {
+                                            if (otherCls === cls && mD === dateStr && mP === p) continue; 
+                                            const otherData = getCellData(mD, mP, otherCls);
+                                            const otherItem = otherData.override || otherData.base;
+                                            if (otherItem && otherItem.type === targetType) {
+                                                return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 시간에 ${otherCls} 수업 중입니다.` };
+                                            }
                                         }
                                     }
                                     
