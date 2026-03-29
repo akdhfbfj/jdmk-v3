@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V8.10 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V8.11 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -78,13 +78,14 @@
         .holiday-bg { background-color: #fff1f2 !important; }
         .event-text { color: #4f46e5 !important; }
         .event-bg { background-color: #f5f3ff !important; }
+        .vacation-bg { background-color: #f1f5f9 !important; color: #94a3b8 !important; }
     </style>
 </head>
 <body>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.10 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.11 로딩 중...</p>
         </div>
     </div>
 
@@ -137,12 +138,14 @@
             const [baseSchedule, setBaseSchedule] = useState({});
             const [overrides, setOverrides] = useState({});
             
-            // 학기별 목표 시수 구조 변경
             const [targetHours, setTargetHours] = useState({ 
                 s1: { english: 15, science: 15, pe: 15 }, 
                 s2: { english: 15, science: 15, pe: 15 } 
             });
-            const [semesterConfig, setSemesterConfig] = useState({ s1Start: '2026-03-02', s1End: '2026-07-20', s2Start: '2026-08-20', s2End: '2026-12-30' });
+            const [semesterConfig, setSemesterConfig] = useState({ 
+                s1Start: '2026-03-02', s1End: '2026-07-17', 
+                s2Start: '2026-08-24', s2End: '2026-12-30' 
+            });
             const [academicEvents, setAcademicEvents] = useState({});
 
             const [activeTab, setActiveTab] = useState('academic'); 
@@ -152,12 +155,9 @@
             const [selectedCell, setSelectedCell] = useState(null);
             const [isSaving, setIsSaving] = useState(false);
 
-            // 시수 통계용 검색어
             const [statSearch, setStatSearch] = useState("");
-            // 강사 목록용 검색어
             const [instSearch, setInstSearch] = useState("");
 
-            // 이동/조정용
             const [moveDate, setMoveDate] = useState("");
             const [movePeriod, setMovePeriod] = useState(1);
             const [activeMoveItem, setActiveMoveItem] = useState(null); 
@@ -234,6 +234,11 @@
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id));
             };
 
+            const isVacationDay = (dateStr) => {
+                const { s1Start, s1End, s2Start, s2End } = semesterConfig;
+                return (dateStr < s1Start) || (dateStr > s1End && dateStr < s2Start) || (dateStr > s2End);
+            };
+
             const getCellData = (dateStr, period, classLabel) => {
                 const overrideKey = `${dateStr}-${period}-${classLabel}`;
                 const date = new Date(dateStr + 'T00:00:00'); 
@@ -246,6 +251,9 @@
                     if (academic.isHoliday) return { type: 'holiday', title: academic.title, isHoliday: true };
                     if (academic.isEvent) return { type: 'event', title: academic.title, isEvent: true };
                 }
+
+                // 방학 체크
+                if (isVacationDay(dateStr)) return { type: 'vacation', title: '방학 기간', isVacation: true };
 
                 const override = overrides[overrideKey];
                 const baseMatchEntry = Object.entries(baseSchedule).find(([k,v]) => 
@@ -324,7 +332,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.10 Pro</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.11 Pro</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -364,9 +372,10 @@
                                         }} className="p-3 border rounded-2xl hover:bg-slate-50 transition-all btn-press"><SafeIcon name="ChevronRight" size={20} /></button>
                                     </div>
                                     <div className="text-center">
-                                        <div className={`text-xl font-black italic drop-shadow-sm ${HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday ? 'holiday-text' : academicEvents[selectedDate]?.isEvent ? 'event-text' : 'text-slate-800'}`}>
+                                        <div className={`text-xl font-black italic drop-shadow-sm ${HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday ? 'holiday-text' : academicEvents[selectedDate]?.isEvent ? 'event-text' : isVacationDay(selectedDate) ? 'text-slate-300' : 'text-slate-800'}`}>
                                             {formatHeaderDate(selectedDate)}
-                                            {(HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday || academicEvents[selectedDate]?.isEvent) && <span className="ml-2 text-sm">[{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.title}]</span>}
+                                            {(HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday || academicEvents[selectedDate]?.isEvent || isVacationDay(selectedDate)) && 
+                                                <span className="ml-2 text-sm">[{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.title || (isVacationDay(selectedDate) ? '방학 기간' : '')}]</span>}
                                         </div>
                                     </div>
                                     <div className="flex bg-slate-100 p-1 rounded-2xl">
@@ -389,7 +398,8 @@
                                                             const dateStr = colDate.toLocaleDateString('en-CA');
                                                             const isHol = HOLIDAYS_2026[dateStr] || academicEvents[dateStr]?.isHoliday;
                                                             const isEv = academicEvents[dateStr]?.isEvent;
-                                                            return <th key={i} className={`p-4 border-r min-w-[180px] ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
+                                                            const isVac = isVacationDay(dateStr);
+                                                            return <th key={i} className={`p-4 border-r min-w-[180px] ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : isVac ? 'vacation-bg opacity-30' : ''}`}>
                                                                 <div className={`text-[10px] font-bold leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-400'}`}>{dateStr.split('-').slice(1).join('.')}</div>
                                                                 <div className={`font-black text-sm mt-1 leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-700'}`}>{d}요일</div>
                                                             </th>;
@@ -405,9 +415,10 @@
                                                             const mondayStr = getMonday(selectedDate);
                                                             const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
                                                             const dateStr = colDate.toLocaleDateString('en-CA');
-                                                            return <td key={i} className="p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all">
+                                                            const isVac = isVacationDay(dateStr);
+                                                            return <td key={i} className={`p-2 border-r last:border-0 align-top h-32 relative group/cell transition-all ${isVac ? 'vacation-bg opacity-10' : 'hover:bg-slate-50'}`}>
                                                                 <div className="space-y-1">
-                                                                    {currentGradeClasses.map(cls => {
+                                                                    {!isVac && currentGradeClasses.map(cls => {
                                                                         const data = getCellData(dateStr, p, cls);
                                                                         const item = data.override || data.base;
                                                                         if (!item) return null;
@@ -442,11 +453,12 @@
                                                     const isToday = curStr === new Date().toLocaleDateString('en-CA');
                                                     const isHol = HOLIDAYS_2026[curStr] || academicEvents[curStr]?.isHoliday;
                                                     const isEv = academicEvents[curStr]?.isEvent;
+                                                    const isVac = isVacationDay(curStr);
                                                     cells.push(
-                                                        <div key={i} onClick={() => { setSelectedDate(curStr); setViewMode('daily'); }} className={`calendar-day cursor-pointer hover:bg-slate-50 transition-all ${isToday ? 'today' : ''} ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
-                                                            <div className={`text-[10px] font-black mb-2 ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-400'}`}>{i} {isHol || isEv ? <span className="text-[8px] ml-1">[{HOLIDAYS_2026[curStr] || academicEvents[curStr].title}]</span> : ''}</div>
+                                                        <div key={i} onClick={() => { setSelectedDate(curStr); setViewMode('daily'); }} className={`calendar-day cursor-pointer hover:bg-slate-50 transition-all ${isToday ? 'today' : ''} ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : isVac ? 'vacation-bg opacity-30' : ''}`}>
+                                                            <div className={`text-[10px] font-black mb-2 ${isHol ? 'holiday-text' : isEv ? 'event-text' : isVac ? 'text-slate-300' : 'text-slate-400'}`}>{i} {isHol || isEv || isVac ? <span className="text-[8px] ml-1">[{HOLIDAYS_2026[curStr] || academicEvents[curStr]?.title || (isVac ? '방학' : '')}]</span> : ''}</div>
                                                             <div className="space-y-1">
-                                                                {!isHol && !isEv && currentGradeClasses.map(cls => {
+                                                                {!isHol && !isEv && !isVac && currentGradeClasses.map(cls => {
                                                                     const count = PERIODS.filter(p => { const cell = getCellData(curStr, p, cls); return cell.override || cell.base; }).length;
                                                                     if(count > 0) return <div key={cls} className="text-[8px] font-black text-indigo-500 truncate leading-none bg-indigo-50 px-1 py-0.5 rounded shadow-sm">{cls} {count}개</div>;
                                                                     return null;
@@ -462,53 +474,80 @@
                                 )}
 
                                 {viewMode === 'daily' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in">
-                                        {currentGradeClasses.map(cls => {
-                                            const isHol = HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday;
-                                            const isEv = academicEvents[selectedDate]?.isEvent;
-                                            return (
-                                                <div key={cls} className={`bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
-                                                    <div className="bg-slate-50 p-4 border-b text-center font-black text-slate-700 uppercase tracking-widest text-sm italic">{cls}</div>
-                                                    <div className="p-3 space-y-3">
-                                                        {isHol || isEv ? (
-                                                            <div className={`h-[400px] flex flex-col justify-center items-center ${isHol ? 'text-rose-300' : 'text-indigo-300'}`}>
-                                                                <SafeIcon name={isHol ? "Flag" : "Info"} size={48} className="mb-4 opacity-20" />
-                                                                <p className="font-black italic text-lg">{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate].title}</p>
-                                                            </div>
-                                                        ) : PERIODS.map(p => {
-                                                            const cell = getCellData(selectedDate, p, cls);
-                                                            const specBase = SPECIALISTS.find(s => s.id === cell.base?.type);
-                                                            const specOverride = SPECIALISTS.find(s => s.id === cell.override?.type);
+                                    <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-50 border-b">
+                                                        <th className="p-5 border-r w-24 text-xs font-black text-slate-400 uppercase tracking-widest italic">교시</th>
+                                                        {currentGradeClasses.map(cls => (
+                                                            <th key={cls} className="p-5 border-r font-black text-slate-700 uppercase tracking-widest text-sm italic">{cls}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(() => {
+                                                        const isHol = HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday;
+                                                        const isEv = academicEvents[selectedDate]?.isEvent;
+                                                        const isVac = isVacationDay(selectedDate);
+                                                        
+                                                        if (isHol || isEv || isVac) {
                                                             return (
-                                                                <div key={p} className={`rounded-[1.5rem] border-2 transition-all min-h-[90px] flex overflow-hidden relative ${cell.isConflict ? 'conflict-glow border-rose-100 ring-2 ring-rose-300' : 'bg-slate-50/40 border-transparent hover:border-indigo-100 hover:bg-white'}`}>
-                                                                    <div className="absolute top-2 left-3 flex items-center z-10 pointer-events-none">
-                                                                        <span className="daily-period-label font-black text-slate-300 italic">{p}</span>
-                                                                    </div>
-                                                                    {cell.isConflict ? (
-                                                                        <div className="w-full flex">
-                                                                            <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 border-r cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} opacity-70`}>
-                                                                                <span className="text-[10px] font-black opacity-50 mb-1 uppercase leading-none">전담</span>
-                                                                                <span className="text-[11px] font-black leading-none">{specBase?.name}</span>
-                                                                            </div>
-                                                                            <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsSidebarOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text}`}>
-                                                                                <span className="text-[10px] font-black opacity-50 mb-1 uppercase leading-none">강사</span>
-                                                                                <span className="text-[11px] font-black truncate w-full text-center leading-none">{cell.override?.title || specOverride?.name}</span>
-                                                                            </div>
+                                                                <tr>
+                                                                    <td colSpan={currentGradeClasses.length + 1} className="h-[500px] text-center">
+                                                                        <div className={`flex flex-col justify-center items-center ${isHol ? 'text-rose-300' : isEv ? 'text-indigo-300' : 'text-slate-200'}`}>
+                                                                            <SafeIcon name={isHol ? "Flag" : isEv ? "Info" : "Moon"} size={64} className="mb-6 opacity-20" />
+                                                                            <p className="font-black italic text-3xl tracking-tighter uppercase">{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.title || (isVac ? '방학 기간' : '')}</p>
+                                                                            <p className="text-sm font-bold opacity-40 mt-2 uppercase tracking-widest">No Specialist Class Marked Today</p>
                                                                         </div>
-                                                                    ) : cell.override || cell.base ? (
-                                                                        <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsSidebarOpen(true); }} className={`w-full flex flex-col justify-center items-center p-4 cursor-pointer hover:brightness-95 transition-all ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text}`}>
-                                                                            <div className="text-[14px] font-black">{(cell.override ? cell.override.title : null) || (cell.override ? specOverride : specBase)?.name}</div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(null); setIsSidebarOpen(true); }} className="w-full flex justify-center items-center opacity-10 cursor-pointer hover:opacity-30 transition-all"><SafeIcon name="Plus" size={20} /></div>
-                                                                    )}
-                                                                </div>
+                                                                    </td>
+                                                                </tr>
                                                             );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                        }
+
+                                                        return PERIODS.map(p => (
+                                                            <tr key={p} className="border-b last:border-0 group">
+                                                                <td className="p-5 bg-slate-50 border-r text-center font-black text-slate-200 text-4xl italic group-hover:text-indigo-100 transition-colors leading-none">{p}</td>
+                                                                {currentGradeClasses.map(cls => {
+                                                                    const cell = getCellData(selectedDate, p, cls);
+                                                                    const specBase = SPECIALISTS.find(s => s.id === cell.base?.type);
+                                                                    const specOverride = SPECIALISTS.find(s => s.id === cell.override?.type);
+                                                                    return (
+                                                                        <td key={cls} className={`p-2 border-r last:border-0 align-middle min-h-[110px] relative transition-all bg-white`}>
+                                                                            {cell.isConflict ? (
+                                                                                <div className="flex h-full min-h-[90px] gap-1 animate-in">
+                                                                                    <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} 
+                                                                                        className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} opacity-60 border border-transparent hover:border-indigo-200 shadow-sm`}>
+                                                                                        <span className="text-[9px] font-black opacity-40 mb-1 uppercase">전담</span>
+                                                                                        <span className="text-[11px] font-black">{specBase?.name}</span>
+                                                                                    </div>
+                                                                                    <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsSidebarOpen(true); }} 
+                                                                                        className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text} border border-rose-300 conflict-glow shadow-md`}>
+                                                                                        <span className="text-[9px] font-black opacity-40 mb-1 uppercase">강사</span>
+                                                                                        <span className="text-[11px] font-black truncate text-center">{cell.override?.title || specOverride?.name}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ) : cell.override || cell.base ? (
+                                                                                <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsSidebarOpen(true); }} 
+                                                                                    className={`h-full min-h-[90px] flex flex-col justify-center items-center p-4 rounded-3xl cursor-pointer hover:brightness-95 transition-all border shadow-sm ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text} ${(cell.override ? specOverride : specBase)?.border}`}>
+                                                                                    <div className="text-[11px] font-black opacity-30 uppercase tracking-widest mb-1">{cell.override ? '강사' : '전담'}</div>
+                                                                                    <div className="text-[15px] font-black leading-none italic tracking-tighter">{(cell.override ? cell.override.title : null) || (cell.override ? specOverride : specBase)?.name}</div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(null); setIsSidebarOpen(true); }} 
+                                                                                    className="w-full min-h-[90px] flex justify-center items-center opacity-0 hover:opacity-100 transition-all cursor-pointer bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+                                                                                    <SafeIcon name="Plus" size={24} className="text-slate-300" />
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                            </tr>
+                                                        ));
+                                                    })()}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -694,28 +733,27 @@
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
                                     <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 h-fit">
-                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 기간 및 목표 시수 설정</h4>
+                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 개학/방학 및 시수 설정</h4>
                                         <div className="space-y-8">
                                             <div className="grid grid-cols-2 gap-4 border-b pb-6">
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 시작</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 개학식</label>
                                                     <input type="date" value={semesterConfig.s1Start} onChange={e => setSemesterConfig({...semesterConfig, s1Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 종료</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 방학식</label>
                                                     <input type="date" value={semesterConfig.s1End} onChange={e => setSemesterConfig({...semesterConfig, s1End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 시작</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 개학식</label>
                                                     <input type="date" value={semesterConfig.s2Start} onChange={e => setSemesterConfig({...semesterConfig, s2Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 종료</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 방학식</label>
                                                     <input type="date" value={semesterConfig.s2End} onChange={e => setSemesterConfig({...semesterConfig, s2End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                             </div>
                                             
-                                            {/* 학기별 독립 목표 시수 입력란 */}
                                             <div className="space-y-6">
                                                 <div className="space-y-4">
                                                     <h5 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest italic">1학기 목표 시수 (반별)</h5>
@@ -814,7 +852,6 @@
                                                                 );
                                                             })}
                                                             
-                                                            {/* 외부강사: 목표 없이 카운팅만 */}
                                                             <div className="pt-4 border-t border-slate-200">
                                                                 <div className="flex justify-between items-center">
                                                                     <span className="font-black text-slate-400 text-xs uppercase tracking-tighter">외부강사 누적 시수</span>
@@ -823,7 +860,6 @@
                                                             </div>
                                                         </div>
                                                         
-                                                        {/* 외부강사 상세 내역 및 검색창 복구 */}
                                                         {stats[cls][sem].history.length > 0 && (
                                                             <div className="mt-8 pt-6 border-t border-slate-200">
                                                                 <div className="flex justify-between items-center mb-4">
@@ -872,33 +908,23 @@
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 const mD = moveDate || dateStr; const mP = movePeriod || p;
                                 
-                                // 중복 수업 방지 로직 (수정 및 강화)
                                 const checkConflicts = (targetType) => {
                                     if (!targetType) return null;
-                                    
-                                    // 1. 공휴일/학교행사 체크
                                     const targetCellInfo = getCellData(mD, mP, cls);
-                                    if (targetCellInfo.isHoliday || targetCellInfo.isEvent) return { msg: '학교 일정/공휴일에는 이동 불가' };
+                                    if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) return { msg: '학교 일정/방학에는 배정 불가' };
                                     
-                                    // 2. 같은 시간에 다른 반(cls)에서 같은 교사(type)가 수업 중인지 체크
                                     for (const otherCls of currentGradeClasses) {
-                                        // 현재 내가 수정하려는 반(cls)은 제외하고 다른 반들만 확인
                                         if (otherCls === cls && mD === dateStr && mP === p) continue; 
-                                        
                                         const otherData = getCellData(mD, mP, otherCls);
                                         const otherItem = otherData.override || otherData.base;
-                                        
-                                        // 같은 교사(targetType)가 발견되면 중복
                                         if (otherItem && otherItem.type === targetType) {
                                             return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 시간에 ${otherCls} 수업 중입니다.` };
                                         }
                                     }
                                     
-                                    // 3. 이동하려는 위치에 이미 수업이 있는지 (자기 자신 위치 이동은 허용)
                                     if ((targetCellInfo.override || targetCellInfo.base) && (mD !== dateStr || mP !== p)) {
                                         return { msg: `${cls}반에 이미 수업이 배정되어 있습니다.` };
                                     }
-
                                     return null;
                                 };
 
@@ -946,13 +972,13 @@
                                                                     setIsSaving(true);
                                                                     try {
                                                                         const existingSource = overrides[selectedCell] || {};
-                                                                        const existingTarget = overrides[`${mD}-${mP}-${cls}`] || {};
                                                                         if (activeMoveItem === 'base') await saveData('overrides', selectedCell, { ...existingSource, hideBase: true });
                                                                         else {
                                                                             const { type, title, status, ...rest } = existingSource;
                                                                             if (Object.keys(rest).length === 0) await deleteData('overrides', selectedCell);
                                                                             else await saveData('overrides', selectedCell, rest);
                                                                         }
+                                                                        const existingTarget = overrides[`${mD}-${mP}-${cls}`] || {};
                                                                         const newItem = { title: currentItem.title || "", type: currentItem.type, status: 'held', classLabel: cls };
                                                                         await saveData('overrides', `${mD}-${mP}-${cls}`, { ...existingTarget, ...newItem });
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
@@ -975,7 +1001,6 @@
                                                                         const type = document.getElementById('new-master-type').value;
                                                                         const conflictCheck = checkConflicts(type);
                                                                         if (conflictCheck) return alert(conflictCheck.msg);
-                                                                        
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
@@ -991,10 +1016,8 @@
                                                                         const title = document.getElementById('new-custom-title').value;
                                                                         const type = document.getElementById('new-custom-type').value;
                                                                         if(!title) return alert("수업명 입력");
-                                                                        
                                                                         const conflictCheck = checkConflicts(type);
                                                                         if (conflictCheck) return alert(conflictCheck.msg);
-                                                                        
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, title, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
@@ -1032,7 +1055,7 @@
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-[110] border border-white/10 opacity-90 scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.10 Precision Engine Ready</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.11 Precision Engine Ready</span>
                     </div>
                 </div>
             );
