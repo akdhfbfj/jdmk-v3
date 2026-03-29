@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V8.7 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V8.8 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -76,13 +76,15 @@
         
         .holiday-text { color: #e11d48 !important; }
         .holiday-bg { background-color: #fff1f2 !important; }
+        .event-text { color: #4f46e5 !important; }
+        .event-bg { background-color: #f5f3ff !important; }
     </style>
 </head>
 <body>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.7 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.8 로딩 중...</p>
         </div>
     </div>
 
@@ -191,7 +193,7 @@
                     onSnapshot(path('overrides'), (s) => {
                         const d = {}; s.docs.forEach(doc => d[doc.id] = doc.data());
                         setOverrides(d);
-                        setLoading(false);
+                        setIsLoading(false);
                     }),
                     onSnapshot(path('academic'), (s) => {
                         const d = {};
@@ -216,14 +218,21 @@
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id));
             };
 
-            // V8.7 핵심 데이터 추출기: 전담 숨김(hideBase)과 강사 데이터(type)를 분리 인지
+            // V8.8 정밀 데이터 엔진: 휴업/행사/공휴일 완벽 분리
             const getCellData = (dateStr, period, classLabel) => {
                 const overrideKey = `${dateStr}-${period}-${classLabel}`;
                 const date = new Date(dateStr + 'T00:00:00'); 
                 const dayIdx = (date.getDay() + 6) % 7; 
 
+                // 1. 공휴일 체크 (완전 휴무)
                 if (HOLIDAYS_2026[dateStr]) return { type: 'holiday', title: HOLIDAYS_2026[dateStr], isHoliday: true };
-                if (academicEvents[dateStr]?.isHoliday) return { type: 'holiday', title: academicEvents[dateStr].title, isHoliday: true };
+                
+                // 2. 등록된 학사 일정 체크
+                const academic = academicEvents[dateStr];
+                if (academic) {
+                    if (academic.isHoliday) return { type: 'holiday', title: academic.title, isHoliday: true };
+                    if (academic.isEvent) return { type: 'event', title: academic.title, isEvent: true };
+                }
 
                 const override = overrides[overrideKey];
                 const baseMatchEntry = Object.entries(baseSchedule).find(([k,v]) => 
@@ -231,9 +240,7 @@
                 );
                 const baseMatch = baseMatchEntry ? { id: baseMatchEntry[0], ...baseMatchEntry[1] } : null;
 
-                // override가 강사 데이터를 갖고 있는지 확인
                 const hasInstructor = override && override.type && override.type !== 'none';
-                // override가 마스터를 숨기고 있는지 확인
                 const hideBase = override && override.hideBase;
 
                 return {
@@ -252,11 +259,16 @@
                     };
                 });
                 const countOccurrences = (start, end, semester) => {
+                    if(!start || !end) return;
                     let curr = new Date(start + 'T00:00:00');
                     const stop = new Date(end + 'T00:00:00');
                     while (curr <= stop) {
                         const dStr = curr.toLocaleDateString('en-CA');
-                        if (!HOLIDAYS_2026[dStr] && !academicEvents[dStr]?.isHoliday) {
+                        // 학교 행사나 공휴일/휴업일에는 전담 시수가 카운트되지 않음
+                        const academic = academicEvents[dStr];
+                        const isNoClassDay = HOLIDAYS_2026[dStr] || academic?.isHoliday || academic?.isEvent;
+                        
+                        if (!isNoClassDay) {
                             const dayIdx = (curr.getDay() + 6) % 7;
                             if (dayIdx < 5) {
                                 currentGradeClasses.forEach(cls => {
@@ -300,7 +312,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.7 Pro</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.8 Pro</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -340,9 +352,9 @@
                                         }} className="p-3 border rounded-2xl hover:bg-slate-50 transition-all btn-press"><SafeIcon name="ChevronRight" size={20} /></button>
                                     </div>
                                     <div className="text-center">
-                                        <div className={`text-xl font-black italic drop-shadow-sm ${HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday ? 'holiday-text' : 'text-slate-800'}`}>
+                                        <div className={`text-xl font-black italic drop-shadow-sm ${HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday ? 'holiday-text' : academicEvents[selectedDate]?.isEvent ? 'event-text' : 'text-slate-800'}`}>
                                             {formatHeaderDate(selectedDate)}
-                                            {(HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday) && <span className="ml-2 text-sm">[{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.title}]</span>}
+                                            {(HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday || academicEvents[selectedDate]?.isEvent) && <span className="ml-2 text-sm">[{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.title}]</span>}
                                         </div>
                                     </div>
                                     <div className="flex bg-slate-100 p-1 rounded-2xl">
@@ -363,9 +375,10 @@
                                                         const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
                                                         const dateStr = colDate.toLocaleDateString('en-CA');
                                                         const isHol = HOLIDAYS_2026[dateStr] || academicEvents[dateStr]?.isHoliday;
-                                                        return <th key={i} className={`p-4 border-r min-w-[180px] ${isHol ? 'holiday-bg' : ''}`}>
-                                                            <div className={`text-[10px] font-bold leading-none ${isHol ? 'holiday-text' : 'text-slate-400'}`}>{dateStr.split('-').slice(1).join('.')}</div>
-                                                            <div className={`font-black text-sm mt-1 leading-none ${isHol ? 'holiday-text' : 'text-slate-700'}`}>{d}요일</div>
+                                                        const isEv = academicEvents[dateStr]?.isEvent;
+                                                        return <th key={i} className={`p-4 border-r min-w-[180px] ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
+                                                            <div className={`text-[10px] font-bold leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-400'}`}>{dateStr.split('-').slice(1).join('.')}</div>
+                                                            <div className={`font-black text-sm mt-1 leading-none ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-700'}`}>{d}요일</div>
                                                         </th>;
                                                     })}
                                                 </tr>
@@ -379,11 +392,11 @@
                                                             const colDate = new Date(mondayStr + 'T00:00:00'); colDate.setDate(colDate.getDate() + i);
                                                             const dateStr = colDate.toLocaleDateString('en-CA');
                                                             const cellData = getCellData(dateStr, p, currentGradeClasses[0]);
-                                                            return <td key={i} className={`p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all ${cellData.isHoliday ? 'holiday-bg' : ''}`}>
-                                                                {cellData.isHoliday ? (
+                                                            return <td key={i} className={`p-2 border-r last:border-0 align-top h-32 relative group/cell hover:bg-slate-50 transition-all ${cellData.isHoliday ? 'holiday-bg' : cellData.isEvent ? 'event-bg' : ''}`}>
+                                                                {cellData.isHoliday || cellData.isEvent ? (
                                                                     <div className="h-full flex flex-col justify-center items-center opacity-40">
-                                                                        <SafeIcon name="Flag" size={14} className="holiday-text mb-1" />
-                                                                        <span className="text-[10px] font-black holiday-text">{cellData.title}</span>
+                                                                        <SafeIcon name={cellData.isHoliday ? "Flag" : "Info"} size={14} className={`${cellData.isHoliday ? 'holiday-text' : 'event-text'} mb-1`} />
+                                                                        <span className={`text-[10px] font-black ${cellData.isHoliday ? 'holiday-text' : 'event-text'}`}>{cellData.title}</span>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="space-y-1">
@@ -422,11 +435,12 @@
                                                     const curStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                                                     const isToday = curStr === new Date().toLocaleDateString('en-CA');
                                                     const isHol = HOLIDAYS_2026[curStr] || academicEvents[curStr]?.isHoliday;
+                                                    const isEv = academicEvents[curStr]?.isEvent;
                                                     cells.push(
-                                                        <div key={i} onClick={() => { setSelectedDate(curStr); setViewMode('daily'); }} className={`calendar-day cursor-pointer hover:bg-slate-50 transition-all ${isToday ? 'today' : ''} ${isHol ? 'holiday-bg' : ''}`}>
-                                                            <div className={`text-[10px] font-black mb-2 ${isHol ? 'holiday-text' : 'text-slate-400'}`}>{i} {isHol && <span className="text-[8px] ml-1">[{HOLIDAYS_2026[curStr] || academicEvents[curStr].title}]</span>}</div>
+                                                        <div key={i} onClick={() => { setSelectedDate(curStr); setViewMode('daily'); }} className={`calendar-day cursor-pointer hover:bg-slate-50 transition-all ${isToday ? 'today' : ''} ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
+                                                            <div className={`text-[10px] font-black mb-2 ${isHol ? 'holiday-text' : isEv ? 'event-text' : 'text-slate-400'}`}>{i} {isHol || isEv ? <span className="text-[8px] ml-1">[{HOLIDAYS_2026[curStr] || academicEvents[curStr].title}]</span> : ''}</div>
                                                             <div className="space-y-1">
-                                                                {!isHol && currentGradeClasses.map(cls => {
+                                                                {!isHol && !isEv && currentGradeClasses.map(cls => {
                                                                     const count = PERIODS.filter(p => { const cell = getCellData(curStr, p, cls); return cell.override || cell.base; }).length;
                                                                     if(count > 0) return <div key={cls} className="text-[8px] font-black text-indigo-500 truncate leading-none bg-indigo-50 px-1 py-0.5 rounded shadow-sm">{cls} {count}개</div>;
                                                                     return null;
@@ -445,14 +459,16 @@
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in">
                                         {currentGradeClasses.map(cls => {
                                             const isHol = HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate]?.isHoliday;
+                                            const isEv = academicEvents[selectedDate]?.isEvent;
                                             return (
-                                                <div key={cls} className={`bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden ${isHol ? 'holiday-bg opacity-80' : ''}`}>
+                                                <div key={cls} className={`bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden ${isHol ? 'holiday-bg' : isEv ? 'event-bg' : ''}`}>
                                                     <div className="bg-slate-50 p-4 border-b text-center font-black text-slate-700 uppercase tracking-widest text-sm italic">{cls}</div>
                                                     <div className="p-3 space-y-3">
-                                                        {isHol ? (
-                                                            <div className="h-[400px] flex flex-col justify-center items-center text-rose-300">
-                                                                <SafeIcon name="Flag" size={48} className="mb-4 opacity-20" />
+                                                        {isHol || isEv ? (
+                                                            <div className={`h-[400px] flex flex-col justify-center items-center ${isHol ? 'text-rose-300' : 'text-indigo-300'}`}>
+                                                                <SafeIcon name={isHol ? "Flag" : "Info"} size={48} className="mb-4 opacity-20" />
                                                                 <p className="font-black italic text-lg">{HOLIDAYS_2026[selectedDate] || academicEvents[selectedDate].title}</p>
+                                                                <p className="text-[10px] font-bold mt-2">{isHol ? "학교를 가지 않는 날입니다." : "학교 일정으로 전담 수업이 없습니다."}</p>
                                                             </div>
                                                         ) : PERIODS.map(p => {
                                                             const cell = getCellData(selectedDate, p, cls);
@@ -622,46 +638,72 @@
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm">
-                                    <div className="p-8 border-b bg-slate-50">
-                                        <h4 className="text-lg font-black text-slate-800 italic uppercase tracking-tighter flex items-center gap-2"><SafeIcon name="Table" className="text-indigo-500"/> 전담 마스터 시간표 원부 관리</h4>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full border-collapse">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b">
-                                                    <th className="p-5 border-r w-24 text-xs font-black text-slate-400">교시</th>
-                                                    {DAYS.map(d => <th key={d} className="p-5 border-r font-black text-slate-700">{d}요일</th>)}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {PERIODS.map(p => (
-                                                    <tr key={p} className="border-b last:border-0">
-                                                        <td className="p-5 bg-slate-50/30 border-r text-center font-black text-slate-200 text-3xl italic">{p}</td>
-                                                        {DAYS.map((_, dIdx) => {
-                                                            const cellItems = Object.entries(baseSchedule)
-                                                                .filter(([k, v]) => v.dayIdx === dIdx && v.period === p)
-                                                                .map(([key, item]) => ({ key, ...item }));
-                                                            return (
-                                                                <td key={dIdx} className="p-2 border-r last:border-0 align-top h-32 bg-white/50">
-                                                                    <div className="flex flex-col gap-1.5 h-full min-h-[100px] border border-dashed border-slate-100 rounded-xl p-1">
-                                                                        {cellItems.map((item, idx) => {
-                                                                            const spec = SPECIALISTS.find(s=>s.id===item.type);
-                                                                            return (
-                                                                                <div key={idx} className={`group relative p-2 rounded-xl border text-[10px] font-black transition-all ${spec?.bg} ${spec?.text} ${spec?.border} shadow-sm truncate`}>
-                                                                                    {spec?.name}: {item.classLabel}
-                                                                                    <button onClick={async () => { if(confirm("마스터 데이터를 삭제하시겠습니까?")) await deleteData('base', item.key); }} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded p-1 text-rose-500 shadow-sm"><SafeIcon name="Trash2" size={10}/></button>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
+                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
+                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 및 목표 시수 설정</h4>
+                                        <div className="space-y-6">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black text-slate-400">1학기 시작</label>
+                                                    <input type="date" value={semesterConfig.s1Start} onChange={e => setSemesterConfig({...semesterConfig, s1Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black text-slate-400">1학기 종료</label>
+                                                    <input type="date" value={semesterConfig.s1End} onChange={e => setSemesterConfig({...semesterConfig, s1End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black text-slate-400">2학기 시작</label>
+                                                    <input type="date" value={semesterConfig.s2Start} onChange={e => setSemesterConfig({...semesterConfig, s2Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black text-slate-400">2학기 종료</label>
+                                                    <input type="date" value={semesterConfig.s2End} onChange={e => setSemesterConfig({...semesterConfig, s2End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {SPECIALISTS.map(s => (
+                                                    <div key={s.id} className="space-y-1">
+                                                        <label className="text-[10px] font-black text-slate-400">{s.name} 목표</label>
+                                                        <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value)})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                    </div>
                                                 ))}
-                                            </tbody>
-                                        </table>
+                                            </div>
+                                            <button onClick={async () => {
+                                                await saveData('academic', 'semesters', semesterConfig);
+                                                await saveData('academic', 'targets', targetHours);
+                                                alert("설정 저장 완료!");
+                                            }} className="w-full py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black shadow-lg hover:bg-indigo-700 transition-all">설정 데이터 저장</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200">
+                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="AlertTriangle" className="text-rose-500"/> 학사 일정(휴업/행사) 등록</h4>
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <input type="date" id="event-date" defaultValue={selectedDate} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                <input type="text" id="event-title" placeholder="예: 재량휴업일, 개학식" className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                            </div>
+                                            <div className="flex bg-slate-100 p-1 rounded-2xl">
+                                                <button id="btn-type-hol" onClick={() => { window.event_type = 'hol'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm">공휴일/휴업일 (학교 안감)</button>
+                                                <button id="btn-type-ev" onClick={() => { window.event_type = 'ev'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-indigo-600 shadow-sm'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400">학교 행사 (전담 수업만 없음)</button>
+                                            </div>
+                                            <button onClick={async () => {
+                                                const d = document.getElementById('event-date').value;
+                                                const t = document.getElementById('event-title').value;
+                                                const type = window.event_type || 'hol';
+                                                if(!d || !t) return alert("날짜와 행사명을 입력하세요.");
+                                                await saveData('academic', d, { title: t, isHoliday: type === 'hol', isEvent: type === 'ev' });
+                                                alert("일정 등록 완료!");
+                                            }} className="w-full py-4 bg-rose-500 text-white rounded-[1.5rem] font-black shadow-lg">일정 추가</button>
+                                            <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 mt-4 bg-slate-50 p-2 rounded-2xl">
+                                                {Object.entries(academicEvents).sort().map(([k,v]) => (
+                                                    <div key={k} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl text-[11px] font-bold">
+                                                        <span className={v.isHoliday ? 'text-rose-600' : 'text-indigo-600'}>{k} : {v.title} ({v.isHoliday ? '휴업' : '행사'})</span>
+                                                        <button onClick={() => deleteData('academic', k)} className="text-rose-400 p-1 hover:bg-rose-50 rounded-lg"><SafeIcon name="X" size={14}/></button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -671,19 +713,7 @@
                             <div className="space-y-12 animate-in">
                                 {Object.keys(stats).map(cls => (
                                     <div key={cls} className="bg-white p-10 rounded-[4rem] border border-slate-200 shadow-sm space-y-12">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-3xl font-black text-slate-800 tracking-tighter uppercase italic leading-none">5학년 {cls} 시수 분석</h3>
-                                            <div className="relative">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="강사 수업 검색..." 
-                                                    value={statSearch}
-                                                    onChange={(e) => setStatSearch(e.target.value)}
-                                                    className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all w-[250px]"
-                                                />
-                                                <SafeIcon name="Search" size={14} className="absolute left-4 top-2.5 text-slate-400" />
-                                            </div>
-                                        </div>
+                                        <h3 className="text-3xl font-black text-slate-800 tracking-tighter uppercase italic leading-none">5학년 {cls} 시수 분석</h3>
                                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
                                             {['s1', 's2'].map(sem => {
                                                 const filteredHistory = stats[cls][sem].history.filter(h => 
@@ -693,7 +723,7 @@
                                                 return (
                                                     <div key={sem} className="space-y-8 p-8 bg-slate-50/50 rounded-[3rem] border border-slate-100 relative overflow-hidden">
                                                         <div className="absolute top-4 right-6 text-[10px] font-black text-indigo-300 uppercase italic tracking-widest leading-none">{sem.toUpperCase()} Semester</div>
-                                                        <h4 className={`text-lg font-black italic leading-none ${sem === 's1' ? 'text-indigo-600' : 'text-rose-600'}`}>{sem === 's1' ? '1학기 배정 현황' : '2학기 배정 현황'}</h4>
+                                                        <h4 className={`text-lg font-black italic leading-none ${sem === 's1' ? 'text-indigo-600' : 'text-rose-600'}`}>{sem === 's1' ? '1학기 이수 현황' : '2학기 이수 현황'}</h4>
                                                         <div className="space-y-6">
                                                             {SPECIALISTS.map(spec => {
                                                                 const count = stats[cls][sem][spec.id] || 0;
@@ -712,9 +742,21 @@
                                                                 );
                                                             })}
                                                         </div>
-                                                        {filteredHistory.length > 0 && (
+                                                        {stats[cls][sem].history.length > 0 && (
                                                             <div className="mt-8 pt-6 border-t border-slate-200">
-                                                                <h5 className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-1 mb-4"><SafeIcon name="List" size={14}/> 외부강사 상세 내역 {statSearch && '(필터링됨)'}</h5>
+                                                                <div className="flex justify-between items-center mb-4">
+                                                                    <h5 className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-1 leading-none"><SafeIcon name="List" size={14}/> 외부강사 상세 내역</h5>
+                                                                    <div className="relative">
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder="수업명/날짜 검색..." 
+                                                                            value={statSearch}
+                                                                            onChange={(e) => setStatSearch(e.target.value)}
+                                                                            className="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all w-[180px] shadow-sm"
+                                                                        />
+                                                                        <SafeIcon name="Search" size={12} className="absolute left-2.5 top-2 text-slate-300" />
+                                                                    </div>
+                                                                </div>
                                                                 <div className="max-h-[250px] overflow-y-auto custom-scrollbar rounded-xl border border-slate-200 bg-white">
                                                                     <table className="excel-table">
                                                                         <thead><tr><th>날짜</th><th>교시</th><th>수업명</th></tr></thead>
@@ -737,7 +779,6 @@
                         )}
                     </main>
 
-                    {/* V8.7 지능형 Lesson 사이드바 (레이어 보존 이동 엔진) */}
                     {isSidebarOpen && (
                         <div className="fixed top-0 right-0 z-[100] w-full max-w-md h-screen bg-white shadow-2xl sidebar-in sidebar-shadow flex flex-col border-l">
                             {(() => {
@@ -746,15 +787,13 @@
                                 const p = parseInt(parts[3]);
                                 const cls = parts.slice(4).join('-'); 
                                 const cellData = getCellData(dateStr, p, cls);
-                                
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
-                                
                                 const mD = moveDate || dateStr; const mP = movePeriod || p;
                                 
                                 const checkConflicts = () => {
                                     if (!currentItem) return null; 
                                     const targetCell = getCellData(mD, mP, cls);
-                                    if (targetCell.isHoliday) return { msg: '공휴일/휴업일에는 이동할 수 없습니다.' };
+                                    if (targetCell.isHoliday || targetCell.isEvent) return { msg: '공휴일/휴업일/학교 행사일에는 이동할 수 없습니다.' };
                                     if ((targetCell.override || targetCell.base) && (mD !== dateStr || mP !== p)) return { msg: `${cls}반에 이미 다른 수업이 배정되어 있습니다.` };
                                     for (const otherCls of currentGradeClasses) {
                                         if (otherCls === cls && mD === dateStr && mP === p) continue; 
@@ -772,7 +811,7 @@
                                     <>
                                         <div className="p-8 border-b bg-slate-50 flex justify-between items-start">
                                             <div className="space-y-2">
-                                                <h2 className="text-xl font-black text-slate-800 italic uppercase leading-none tracking-widest mt-2">Lesson <span className="text-indigo-600">Editor</span></h2>
+                                                <h2 className="text-xl font-black text-slate-800 italic uppercase tracking-widest leading-none mt-2">Lesson <span className="text-indigo-600">Editor</span></h2>
                                                 <div className="text-[12px] font-black text-slate-700 bg-white px-3 py-1.5 rounded-full border shadow-sm w-fit uppercase tracking-tighter leading-none mt-2">
                                                     {formatHeaderDate(dateStr)} / {p}교시
                                                 </div>
@@ -815,22 +854,14 @@
                                                                     try {
                                                                         const existingSource = overrides[selectedCell] || {};
                                                                         const existingTarget = overrides[`${mD}-${mP}-${cls}`] || {};
-
-                                                                        // 1. 기존 자리 처리 (정밀하게 해당 아이템만 제거)
-                                                                        if (activeMoveItem === 'base') {
-                                                                            // 전담 이동 -> old 자리에 hideBase만 남김(또는 강사데이터 유지하며 hideBase 추가)
-                                                                            await saveData('overrides', selectedCell, { ...existingSource, hideBase: true });
-                                                                        } else {
-                                                                            // 강사 이동 -> old 자리의 강사데이터만 지우고 hideBase 정보는 유지
+                                                                        if (activeMoveItem === 'base') await saveData('overrides', selectedCell, { ...existingSource, hideBase: true });
+                                                                        else {
                                                                             const { type, title, status, ...rest } = existingSource;
                                                                             if (Object.keys(rest).length === 0) await deleteData('overrides', selectedCell);
                                                                             else await saveData('overrides', selectedCell, rest);
                                                                         }
-
-                                                                        // 2. 새 자리 처리 (해당 아이템만 덮어씀)
                                                                         const newItem = { title: currentItem.title || "", type: currentItem.type, status: 'held', classLabel: cls };
                                                                         await saveData('overrides', `${mD}-${mP}-${cls}`, { ...existingTarget, ...newItem });
-
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
                                                                     } catch(e) { alert("오류: " + e.message); }
                                                                     setIsSaving(false);
@@ -881,9 +912,8 @@
                                                 <button onClick={async () => {
                                                     if(confirm("이 수업을 오늘 일정에서 삭제하시겠습니까? (겹쳐있던 다른 수업은 보존됩니다)")) {
                                                         const existing = overrides[selectedCell] || {};
-                                                        if (activeMoveItem === 'base') {
-                                                            await saveData('overrides', selectedCell, { ...existing, hideBase: true });
-                                                        } else {
+                                                        if (activeMoveItem === 'base') await saveData('overrides', selectedCell, { ...existing, hideBase: true });
+                                                        else {
                                                             const { type, title, status, ...rest } = existing;
                                                             if (Object.keys(rest).length === 0) await deleteData('overrides', selectedCell);
                                                             else await saveData('overrides', selectedCell, rest);
@@ -902,7 +932,7 @@
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-[110] border border-white/10 opacity-90 scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.7 Precision Engine Active</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.8 Precision Engine Ready</span>
                     </div>
                 </div>
             );
