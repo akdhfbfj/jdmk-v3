@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V7.4 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V7.5 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -47,8 +47,13 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top: 3px solid #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; }
+        
         .animate-in { animation: fadeIn 0.2s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .sidebar-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
         .day-sat { color: #2563eb; }
         .day-sun { color: #dc2626; }
@@ -72,7 +77,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V7.4 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V7.5 로딩 중...</p>
         </div>
     </div>
 
@@ -114,7 +119,7 @@
             const [activeTab, setActiveTab] = useState('academic'); 
             const [viewMode, setViewMode] = useState('weekly'); 
             const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
-            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
             const [selectedCell, setSelectedCell] = useState(null);
             const [isSaving, setIsSaving] = useState(false);
 
@@ -276,7 +281,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V7.4 Matrix</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V7.5 Matrix</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -404,24 +409,24 @@
                                                                 {cell.isConflict ? (
                                                                     <div className="w-full flex">
                                                                         {/* 전담 영역 클릭 */}
-                                                                        <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsModalOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 border-r cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} opacity-70`}>
+                                                                        <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 border-r cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} opacity-70`}>
                                                                             <span className="text-[10px] font-black opacity-50 mb-1">전담</span>
                                                                             <span className="text-[11px] font-black">{specBase?.name}</span>
                                                                         </div>
                                                                         {/* 강사 영역 클릭 */}
-                                                                        <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsModalOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text}`}>
+                                                                        <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsSidebarOpen(true); }} className={`flex-1 flex flex-col justify-center items-center p-2 cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text}`}>
                                                                             <span className="text-[10px] font-black opacity-50 mb-1">강사</span>
                                                                             <span className="text-[11px] font-black truncate w-full text-center">{cell.override?.title || specOverride?.name}</span>
                                                                         </div>
                                                                         <div className="absolute top-2 right-3 text-rose-600 animate-bounce pointer-events-none"><SafeIcon name="AlertTriangle" size={14}/></div>
                                                                     </div>
                                                                 ) : cell.override || cell.base ? (
-                                                                    <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsModalOpen(true); }} className={`w-full flex flex-col justify-center items-center p-4 cursor-pointer hover:brightness-95 transition-all ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text}`}>
+                                                                    <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsSidebarOpen(true); }} className={`w-full flex flex-col justify-center items-center p-4 cursor-pointer hover:brightness-95 transition-all ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text}`}>
                                                                         <div className="text-[14px] font-black">{(cell.override ? cell.override.title : null) || (cell.override ? specOverride : specBase)?.name}</div>
                                                                         {(cell.override?.title) && <div className="text-[9px] font-bold opacity-70 mt-1 uppercase tracking-tighter">{(cell.override ? specOverride : specBase)?.name}</div>}
                                                                     </div>
                                                                 ) : (
-                                                                    <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(null); setIsModalOpen(true); }} className="w-full flex justify-center items-center opacity-10 cursor-pointer hover:opacity-30 transition-all"><SafeIcon name="Plus" size={20} /></div>
+                                                                    <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(null); setIsSidebarOpen(true); }} className="w-full flex justify-center items-center opacity-10 cursor-pointer hover:opacity-30 transition-all"><SafeIcon name="Plus" size={20} /></div>
                                                                 )}
                                                             </div>
                                                         );
@@ -773,21 +778,22 @@
                         )}
                     </main>
 
-                    {/* V7.4 지능형 Lesson 편집/이동/등록 모달 */}
-                    {isModalOpen && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-                            <div className="bg-white w-full max-w-sm rounded-[4rem] p-10 shadow-2xl space-y-6 animate-in zoom-in-95 overflow-hidden">
+                    {/* V7.5 지능형 Lesson 사이드바 (Sidebar) */}
+                    {isSidebarOpen && (
+                        <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
+                            {/* 배경 오버레이 */}
+                            <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in transition-opacity"></div>
+                            
+                            {/* 사이드바 본체 */}
+                            <div className="relative w-full max-w-md bg-white h-full shadow-2xl sidebar-in flex flex-col">
                                 {(() => {
                                     const parts = selectedCell.split('-');
-                                    // parts: [yyyy, mm, dd, period, class]
                                     const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
                                     const p = parseInt(parts[3]);
                                     const cls = parts[4];
                                     const cellData = getCellData(dateStr, p, cls);
                                     
-                                    // 겹침 시 선택 로직
                                     const moveItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
-                                    
                                     const checkConflict = (d, per) => {
                                         const res = getCellData(d, per, cls);
                                         return !!(res.override || res.base);
@@ -799,120 +805,154 @@
 
                                     return (
                                         <>
-                                            <div className="text-center space-y-2">
-                                                <h2 className="text-2xl font-black text-slate-800 tracking-tighter italic uppercase leading-none">Lesson Manager</h2>
-                                                {/* 날짜 표시 개선: 2026.03.23 | 5 3교시 -> 2026년 03월 23일 | 5-1 3교시 */}
-                                                <p className="text-[11px] text-slate-400 font-extrabold uppercase tracking-[0.1em] mt-3 leading-none bg-slate-50 py-3 rounded-full border border-slate-100">
-                                                    {formatHeaderDate(dateStr)} | {cls} {p}교시
-                                                </p>
-                                                
-                                                {cellData.isConflict && (
-                                                    <div className="mt-3 bg-indigo-50 text-indigo-600 p-4 rounded-3xl border border-indigo-100 flex flex-col items-center">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <SafeIcon name="Info" size={16}/>
-                                                            <span className="text-[10px] font-black uppercase tracking-tight">현재 겹침 수정 중</span>
-                                                        </div>
-                                                        <span className="text-[11px] font-black">선택된 수업: <span className="underline decoration-2 underline-offset-2">{activeMoveItem === 'base' ? '전담(' + cellData.base.type + ')' : '강사(' + (cellData.override.title || '외부강사') + ')'}</span></span>
-                                                    </div>
-                                                )}
+                                            {/* 헤더 섹션 */}
+                                            <div className="p-8 border-b bg-slate-50 flex justify-between items-center">
+                                                <div className="space-y-1">
+                                                    <h2 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter">Lesson Matrix <span className="text-indigo-600">Pro</span></h2>
+                                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{formatHeaderDate(dateStr)} | {cls} {p}교시</p>
+                                                </div>
+                                                <button onClick={() => setIsSidebarOpen(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 hover:text-slate-600"><SafeIcon name="X" size={24}/></button>
                                             </div>
 
-                                            <div className="space-y-4">
-                                                <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-4 border border-slate-100 shadow-inner">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <h5 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1 leading-none"><SafeIcon name="Wand2" size={14}/> {moveItem ? '스케줄 이동 프로세스' : '새로운 수업 등록'}</h5>
-                                                        {moveItem && (
-                                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black border ${SPECIALISTS.find(s=>s.id===moveItem.type)?.bg} ${SPECIALISTS.find(s=>s.id===moveItem.type)?.text}`}>
-                                                                {moveItem.title || SPECIALISTS.find(s=>s.id===moveItem.type)?.name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    {moveItem ? (
-                                                        <div className="space-y-3">
-                                                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase italic">
-                                                                <SafeIcon name="ArrowRight" size={12}/> {dateStr.replace(/-/g,'.')} → <span className="text-indigo-600">{mD.replace(/-/g,'.')} {mP}교시</span>
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <label className="text-[9px] font-black text-slate-300 ml-1 leading-none uppercase tracking-tighter italic">Step 1. 이동할 날짜 선택</label>
-                                                                <input type="date" value={mD} onChange={e => setMoveDate(e.target.value)} className="w-full p-3 rounded-xl border-none bg-white text-[13px] font-black text-slate-800 shadow-sm outline-none focus:ring-2 focus:ring-indigo-100" />
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <label className="text-[9px] font-black text-slate-300 ml-1 leading-none uppercase tracking-tighter italic">Step 2. 이동할 교시 선택</label>
-                                                                <select value={mP} onChange={e => setMovePeriod(parseInt(e.target.value))} className="w-full p-3 rounded-xl border-none bg-white text-[13px] font-black text-slate-800 shadow-sm outline-none">
-                                                                    {PERIODS.map(n => <option key={n} value={n}>{n}교시</option>)}
-                                                                </select>
-                                                            </div>
-
-                                                            <div className={`flex items-center gap-2 p-3 rounded-xl border transition-colors ${isBusy ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
-                                                                <SafeIcon name={isBusy ? "AlertCircle" : "CheckCircle2"} size={16}/>
-                                                                <span className="text-[11px] font-black tracking-tighter leading-none">{isBusy ? "해당 시간에는 이미 수업이 겹칩니다." : "이동 가능한 빈 시간입니다."}</span>
+                                            {/* 본문 섹션 */}
+                                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                                                
+                                                {/* 1. 현재 수업 상태 확인 */}
+                                                <div className="space-y-4">
+                                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">현재 수업 정보 확인</h3>
+                                                    {cellData.override || cellData.base ? (
+                                                        <div className="space-y-2">
+                                                            {cellData.isConflict && (
+                                                                <div className="bg-rose-50 border border-rose-100 p-4 rounded-3xl flex items-center gap-3 mb-4">
+                                                                    <div className="bg-rose-500 p-2 rounded-xl text-white shadow-lg shadow-rose-200 animate-pulse"><SafeIcon name="AlertTriangle" size={16}/></div>
+                                                                    <div>
+                                                                        <div className="text-[11px] font-black text-rose-600 uppercase tracking-tighter">Conflict Detected</div>
+                                                                        <div className="text-[10px] font-bold text-rose-400">전담과 강사 수업이 동시에 배정되었습니다.</div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            <div className="grid grid-cols-1 gap-3">
+                                                                {cellData.base && (
+                                                                    <div onClick={() => setActiveMoveItem('base')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'base' ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-xl' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.base.type)?.bg} flex flex-col relative overflow-hidden`}>
+                                                                        {activeMoveItem === 'base' && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
+                                                                        <span className="text-[10px] font-black opacity-50 uppercase mb-1">전담 수업 (Master)</span>
+                                                                        <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.base.type)?.text}`}>{SPECIALISTS.find(s=>s.id===cellData.base.type)?.name}</span>
+                                                                    </div>
+                                                                )}
+                                                                {cellData.override && (
+                                                                    <div onClick={() => setActiveMoveItem('override')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'override' || !activeMoveItem ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-xl' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.bg} flex flex-col relative overflow-hidden`}>
+                                                                        {(activeMoveItem === 'override' || !activeMoveItem) && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
+                                                                        <span className="text-[10px] font-black opacity-50 uppercase mb-1">등록 수업 (Override)</span>
+                                                                        <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.text}`}>{cellData.override.title || SPECIALISTS.find(s=>s.id===cellData.override.type)?.name}</span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="space-y-4">
-                                                            <p className="text-center py-2 text-[11px] text-slate-400 font-bold italic uppercase tracking-widest leading-none">이 슬롯은 현재 비어있습니다.</p>
-                                                            <div className="space-y-2">
-                                                                <input type="text" placeholder="수업명 (예: 창체 한자)" id="new-lesson-title-inline" className="w-full p-3 rounded-xl bg-white border-none font-black text-[12px] shadow-sm outline-none focus:ring-2 focus:ring-indigo-100" />
-                                                                <select id="new-lesson-type-inline" className="w-full p-3 rounded-xl bg-white border-none font-black text-[12px] shadow-sm outline-none">
-                                                                    {SPECIALISTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                                </select>
-                                                                <button onClick={async () => {
-                                                                    const title = document.getElementById('new-lesson-title-inline').value;
-                                                                    const type = document.getElementById('new-lesson-type-inline').value;
-                                                                    if(!title) return alert("수업명을 입력하세요.");
-                                                                    setIsSaving(true);
-                                                                    await saveData('overrides', selectedCell, { title, type, status: 'held', classLabel: cls });
-                                                                    setIsSaving(false); setIsModalOpen(false);
-                                                                }} className="w-full py-3 bg-slate-900 text-white rounded-xl font-black text-[11px] shadow-lg active:scale-95 transition-all">현재 자리에 바로 등록</button>
+                                                        <div className="p-8 border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center text-center space-y-3">
+                                                            <div className="bg-slate-50 p-4 rounded-3xl text-slate-200"><SafeIcon name="Inbox" size={32}/></div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-[13px] font-black text-slate-500 italic uppercase tracking-tighter leading-none">현재 배정된 수업이 없습니다.</p>
+                                                                <p className="text-[10px] font-bold text-slate-300">새로운 수업을 등록하거나 다른 시간을 가져오세요.</p>
                                                             </div>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                <div className="flex flex-col gap-2">
-                                                    {moveItem && (
-                                                        <button 
-                                                            disabled={isBusy}
-                                                            onClick={async () => {
-                                                                if(isBusy) return;
-                                                                if(!confirm(`${formatHeaderDate(mD)} ${mP}교시로 이동할까요?`)) return;
-                                                                
-                                                                setIsSaving(true);
-                                                                try {
-                                                                    const lessonData = { 
-                                                                        title: moveItem.title || "", 
-                                                                        type: moveItem.type, 
-                                                                        status: 'held', 
-                                                                        classLabel: cls 
-                                                                    };
-
-                                                                    // 기존 오버라이드 삭제
-                                                                    if (activeMoveItem === 'override' || cellData.override) {
-                                                                        await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
-                                                                    }
-                                                                    
-                                                                    await saveData('overrides', `${mD}-${mP}-${cls}`, lessonData);
-                                                                    setIsModalOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
-                                                                } catch(e) { alert("오류: " + e.message); }
-                                                                setIsSaving(false);
-                                                            }} 
-                                                            className={`w-full py-4 rounded-2xl font-black text-[14px] shadow-xl transition-all btn-press ${isBusy ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
-                                                            {isBusy ? '다른 자리를 선택하세요' : '이 위치로 이동 확정'}
-                                                        </button>
-                                                    )}
-                                                    {(cellData.override) && (
-                                                        <button onClick={async () => {
-                                                            if(confirm("이 수업 기록을 완전히 삭제하시겠습니까?")) {
-                                                                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
-                                                                setIsModalOpen(false);
-                                                            }
-                                                        }} className="w-full py-4 bg-slate-100 text-slate-400 font-black rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all text-[11px] uppercase tracking-widest border border-slate-200">Reset Slot</button>
-                                                    )}
+                                                {/* 2. 수업 조정 (이동/등록) */}
+                                                <div className="space-y-4">
+                                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">스케줄 조정 프로세스</h3>
+                                                    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                                                        
+                                                        {moveItem ? (
+                                                            <>
+                                                                <div className="flex items-center gap-4 py-2 border-b border-dashed border-slate-100">
+                                                                    <div className="text-center">
+                                                                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">From</div>
+                                                                        <div className="text-[12px] font-black text-slate-700">{dateStr.replace(/-/g,'.')}</div>
+                                                                    </div>
+                                                                    <SafeIcon name="ArrowRight" className="text-indigo-400" size={16}/>
+                                                                    <div className="text-center">
+                                                                        <div className="text-[10px] font-black text-indigo-300 uppercase tracking-tighter">To (Target)</div>
+                                                                        <div className="text-[12px] font-black text-indigo-600">{mD.replace(/-/g,'.')} <span className="text-slate-400">|</span> {mP}교시</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-4">
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">날짜 선택</label>
+                                                                        <input type="date" value={mD} onChange={e => setMoveDate(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none focus:ring-2 focus:ring-indigo-100" />
+                                                                    </div>
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">교시 선택</label>
+                                                                        <select value={mP} onChange={e => setMovePeriod(parseInt(e.target.value))} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none">
+                                                                            {PERIODS.map(n => <option key={n} value={n}>{n}교시</option>)}
+                                                                        </select>
+                                                                    </div>
+                                                                    <div className={`flex items-center gap-2 p-4 rounded-2xl border transition-all ${isBusy ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                                                        <SafeIcon name={isBusy ? "AlertCircle" : "CheckCircle2"} size={16}/>
+                                                                        <span className="text-[11px] font-black tracking-tighter leading-none">{isBusy ? "선택하신 시간에는 이미 수업이 배정되어 있습니다." : "해당 시간으로 수업을 조정할 수 있습니다."}</span>
+                                                                    </div>
+                                                                    <button 
+                                                                        disabled={isBusy}
+                                                                        onClick={async () => {
+                                                                            if(isBusy) return;
+                                                                            if(!confirm(`${formatHeaderDate(mD)} ${mP}교시로 수업을 조정하시겠습니까?`)) return;
+                                                                            setIsSaving(true);
+                                                                            try {
+                                                                                const lessonData = { title: moveItem.title || "", type: moveItem.type, status: 'held', classLabel: cls };
+                                                                                if (activeMoveItem === 'override' || cellData.override) {
+                                                                                    await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
+                                                                                }
+                                                                                await saveData('overrides', `${mD}-${mP}-${cls}`, lessonData);
+                                                                                setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
+                                                                            } catch(e) { alert("조정 오류: " + e.message); }
+                                                                            setIsSaving(false);
+                                                                        }} 
+                                                                        className={`w-full py-5 rounded-[1.5rem] font-black text-[14px] shadow-xl transition-all btn-press ${isBusy ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
+                                                                        {isBusy ? '시간대를 다시 선택하세요' : '이 시간으로 수업 조정 실행'}
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="space-y-4">
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">새 수업명</label>
+                                                                    <input type="text" placeholder="예: 생존수영, 자치 등" id="new-lesson-sidebar-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">과목 타입</label>
+                                                                    <select id="new-lesson-sidebar-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-slate-800 shadow-inner outline-none">
+                                                                        {SPECIALISTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <button onClick={async () => {
+                                                                    const title = document.getElementById('new-lesson-sidebar-title').value;
+                                                                    const type = document.getElementById('new-lesson-sidebar-type').value;
+                                                                    if(!title) return alert("수업명을 입력하세요.");
+                                                                    setIsSaving(true);
+                                                                    await saveData('overrides', selectedCell, { title, type, status: 'held', classLabel: cls });
+                                                                    setIsSaving(false); setIsSidebarOpen(false);
+                                                                }} className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[14px] shadow-xl active:scale-95 transition-all">현재 자리에 수업 등록</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <button onClick={() => { setIsModalOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-3 bg-slate-50 text-slate-400 rounded-2xl font-black transition-all text-[11px] uppercase tracking-widest border border-slate-100">Cancel</button>
+                                            {/* 푸터 섹션 (삭제 버튼 등) */}
+                                            <div className="p-8 border-t bg-slate-50/50 space-y-3">
+                                                {(cellData.override) && (
+                                                    <button onClick={async () => {
+                                                        if(confirm("이 수업 기록을 완전히 삭제하시겠습니까?")) {
+                                                            await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell));
+                                                            setIsSidebarOpen(false);
+                                                        }
+                                                    }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl hover:bg-rose-50 transition-all text-[12px] uppercase tracking-widest border border-rose-100 flex items-center justify-center gap-2">
+                                                        <SafeIcon name="Trash2" size={14}/> Reset Current Slot
+                                                    </button>
+                                                )}
+                                                <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-4 bg-slate-100 text-slate-400 font-black rounded-2xl transition-all text-[12px] uppercase tracking-widest">Close Sidebar</button>
+                                            </div>
                                         </>
                                     );
                                 })()}
@@ -920,9 +960,9 @@
                         </div>
                     )}
 
-                    <div className="fixed bottom-6 right-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-90 hover:opacity-100 transition-opacity scale-90">
+                    <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-90 hover:opacity-100 transition-opacity scale-90">
                         <div className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(129,140,248,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Intelligence V7.4 Global Sync</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Intelligence V7.5 Global Master</span>
                     </div>
                 </div>
             );
