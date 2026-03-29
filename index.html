@@ -913,21 +913,21 @@
                                 // 이동 혹은 현재 편집 중인 아이템 결정
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 
-                                // 중복 체크 로직 대폭 강화 및 유연화
+                                // 중복 체크 로직 대폭 강화 및 정밀화
                                 const checkConflicts = (targetType, targetDate, targetPeriod) => {
                                     if (!targetType) return null;
                                     const date = new Date(targetDate + 'T00:00:00');
                                     const dayIdx = (date.getDay() + 6) % 7;
                                     const targetCellInfo = getCellData(targetDate, targetPeriod, cls);
                                     
-                                    // 1. 학교 일정 및 방학 체크 (차단 우선순위 높음)
+                                    // 1. 학교 일정 및 방학 체크
                                     if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) {
                                         return { msg: '학교 일정/방학 기간입니다. (입력 시 주의)', severity: 'warning' };
                                     }
                                     
-                                    // 2. 교사 중복 체크 (타 학년 포함 전수 조사)
+                                    // 2. 교사 중복 체크 (타 학급/타 학년 포함 전수 조사)
                                     if (targetType !== 'external') {
-                                        // A. 마스터 시간표(baseSchedule) 전수 대조 - 과학 등 모든 과목 ID/타학급 명칭 정확히 비교
+                                        // A. 마스터 시간표(baseSchedule) 전수 대조
                                         const masterConflict = Object.values(baseSchedule).find(v => 
                                             v.dayIdx === dayIdx && v.period === targetPeriod && String(v.type) === String(targetType) && v.classLabel !== cls
                                         );
@@ -935,22 +935,26 @@
                                             return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 마스터 시간표상 해당 시간에 [${masterConflict.classLabel}] 수업 중입니다.`, severity: 'conflict' };
                                         }
 
-                                        // B. 수동 등록된(override) 일정도 타 학급 포함 전체 확인
+                                        // B. 수동 등록된(override) 일정 정밀 확인 (날짜 하이픈 고려 파싱)
                                         const overrideConflictKey = Object.keys(overrides).find(key => {
-                                            const [d, p_val, ...cParts] = key.split('-');
-                                            const c_name = cParts.join('-');
+                                            const kParts = key.split('-');
+                                            const kDate = `${kParts[0]}-${kParts[1]}-${kParts[2]}`;
+                                            const kPeriod = parseInt(kParts[3]);
+                                            const kClass = kParts.slice(4).join('-');
                                             const v = overrides[key];
-                                            return d === targetDate && parseInt(p_val) === targetPeriod && String(v.type) === String(targetType) && c_name !== cls;
+                                            
+                                            // 1) 날짜/교시 일치, 2) 과목 일치, 3) 현재 편집중인 반이 아님, 4) 실제로 타입이 있는 유효한 수업임
+                                            return kDate === targetDate && kPeriod === targetPeriod && String(v.type) === String(targetType) && kClass !== cls && !v.hideBase && v.type;
                                         });
                                         if (overrideConflictKey) {
-                                            const c_name = overrideConflictKey.split('-').slice(2).join('-');
-                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 일시에 이미 [${c_name}] 수업이 수동 등록되어 있습니다.`, severity: 'conflict' };
+                                            const confClass = overrideConflictKey.split('-').slice(4).join('-');
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 일시에 이미 [${confClass}] 수업이 수동 등록되어 있습니다.`, severity: 'conflict' };
                                         }
                                     }
                                     
                                     // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크 (덮어쓰기 경고)
                                     if (targetCellInfo.override && (targetDate !== dateStr || targetPeriod !== p)) {
-                                        return { msg: `이미 [${targetCellInfo.override.title || SPECIALISTS.find(s=>s.id===targetCellInfo.override.type)?.name}] 수업이 배정된 칸입니다.`, severity: 'warning' };
+                                        return { msg: `해당 칸에는 이미 [${targetCellInfo.override.title || SPECIALISTS.find(s=>s.id===targetCellInfo.override.type)?.name}] 수업이 배정되어 있습니다.`, severity: 'warning' };
                                     }
                                     
                                     return null;
@@ -1011,14 +1015,15 @@
                                                                             if (Object.keys(rest).length === 0) await deleteData('overrides', selectedCell);
                                                                             else await saveData('overrides', selectedCell, rest);
                                                                         }
-                                                                        const existingTarget = overrides[`${mD}-${mP}-${cls}`] || {};
+                                                                        const targetKey = `${mD}-${mP}-${cls}`;
+                                                                        const existingTarget = overrides[targetKey] || {};
                                                                         const newItem = { title: currentItem.title || "", type: currentItem.type, status: 'held', classLabel: cls };
-                                                                        await saveData('overrides', `${mD}-${mP}-${cls}`, { ...existingTarget, ...newItem });
+                                                                        await saveData('overrides', targetKey, { ...existingTarget, ...newItem });
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
                                                                     } catch(e) { alert("오류: " + e.message); }
                                                                     setIsSaving(false);
-                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? (conflict.severity === 'conflict' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700') : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
-                                                                {conflict ? '경고 무시하고 반영' : '달력에 반영'}
+                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
+                                                                {conflict ? '경고 무시하고 강제 반영' : '달력에 반영'}
                                                             </button>
                                                         </div>
                                                     ) : (
@@ -1041,8 +1046,8 @@
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, type: newRegType, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
-                                                                        {conflict ? '경고 무시하고 반영' : '달력에 반영'}
+                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
+                                                                        {conflict ? '경고 무시하고 강제 반영' : '달력에 반영'}
                                                                     </button>
                                                                 </div>
                                                             ) : (
@@ -1061,8 +1066,8 @@
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, title: newRegTitle, type: 'external', status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${!newRegTitle ? 'bg-slate-100 text-slate-300' : (conflict ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-900 text-white hover:bg-black active:scale-95')}`}>
-                                                                        {conflict ? '경고 무시하고 반영' : '달력에 반영'}
+                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${!newRegTitle ? 'bg-slate-100 text-slate-300' : (conflict ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200' : 'bg-slate-900 text-white hover:bg-black active:scale-95')}`}>
+                                                                        {conflict ? '경고 무시하고 강제 반영' : '달력에 반영'}
                                                                     </button>
                                                                 </div>
                                                             )}
