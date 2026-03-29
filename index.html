@@ -913,45 +913,44 @@
                                 // 이동 혹은 현재 편집 중인 아이템 결정
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 
-                                // 중복 체크 로직 대폭 강화 (타 학년 포함)
+                                // 중복 체크 로직 대폭 강화 및 유연화
                                 const checkConflicts = (targetType, targetDate, targetPeriod) => {
                                     if (!targetType) return null;
                                     const date = new Date(targetDate + 'T00:00:00');
                                     const dayIdx = (date.getDay() + 6) % 7;
                                     const targetCellInfo = getCellData(targetDate, targetPeriod, cls);
                                     
-                                    // 1. 학교 일정 및 방학 체크
+                                    // 1. 학교 일정 및 방학 체크 (차단 우선순위 높음)
                                     if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) {
-                                        return { msg: '학교 일정/방학에는 배정할 수 없습니다.' };
+                                        return { msg: '학교 일정/방학 기간입니다. (입력 시 주의)', severity: 'warning' };
                                     }
                                     
-                                    // 2. 교사 중복 체크 (전담 과목일 때만 수행)
+                                    // 2. 교사 중복 체크 (타 학년 포함 전수 조사)
                                     if (targetType !== 'external') {
-                                        // A. 마스터 시간표(baseSchedule) 전체를 대조하여 타 학년 포함 확인
+                                        // A. 마스터 시간표(baseSchedule) 전수 대조 - 과학 등 모든 과목 ID/타학급 명칭 정확히 비교
                                         const masterConflict = Object.values(baseSchedule).find(v => 
-                                            v.dayIdx === dayIdx && v.period === targetPeriod && v.type === targetType && v.classLabel !== cls
+                                            v.dayIdx === dayIdx && v.period === targetPeriod && String(v.type) === String(targetType) && v.classLabel !== cls
                                         );
                                         if (masterConflict) {
-                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 마스터 시간표상 해당 시간에 ${masterConflict.classLabel} 수업 중입니다.` };
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 마스터 시간표상 해당 시간에 [${masterConflict.classLabel}] 수업 중입니다.`, severity: 'conflict' };
                                         }
 
-                                        // B. 이미 수동으로 등록된(override) 일정을 타 학급 포함 전체 확인
+                                        // B. 수동 등록된(override) 일정도 타 학급 포함 전체 확인
                                         const overrideConflictKey = Object.keys(overrides).find(key => {
-                                            const [d, p, ...cParts] = key.split('-');
-                                            const c = cParts.join('-');
+                                            const [d, p_val, ...cParts] = key.split('-');
+                                            const c_name = cParts.join('-');
                                             const v = overrides[key];
-                                            // 날짜/교시/과목이 같은데 학급만 다른 경우 (현재 학급의 현재 교시는 스킵)
-                                            return d === targetDate && parseInt(p) === targetPeriod && v.type === targetType && c !== cls;
+                                            return d === targetDate && parseInt(p_val) === targetPeriod && String(v.type) === String(targetType) && c_name !== cls;
                                         });
                                         if (overrideConflictKey) {
-                                            const c = overrideConflictKey.split('-').slice(2).join('-');
-                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 날짜에 이미 ${c} 수업이 잡혀있습니다.` };
+                                            const c_name = overrideConflictKey.split('-').slice(2).join('-');
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 일시에 이미 [${c_name}] 수업이 수동 등록되어 있습니다.`, severity: 'conflict' };
                                         }
                                     }
                                     
-                                    // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크 (덮어쓰기 방지)
+                                    // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크 (덮어쓰기 경고)
                                     if (targetCellInfo.override && (targetDate !== dateStr || targetPeriod !== p)) {
-                                        return { msg: `${cls}반 해당 교시에 이미 수동 등록된 수업이 있습니다.` };
+                                        return { msg: `이미 [${targetCellInfo.override.title || SPECIALISTS.find(s=>s.id===targetCellInfo.override.type)?.name}] 수업이 배정된 칸입니다.`, severity: 'warning' };
                                     }
                                     
                                     return null;
@@ -998,12 +997,11 @@
                                                                 </div>
                                                             </div>
                                                             {conflict && (
-                                                                <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600 animate-in">
-                                                                    <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-none">{conflict.msg}</span>
+                                                                <div className={`flex items-center gap-2 p-4 rounded-2xl border animate-in ${conflict.severity === 'conflict' ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                                                                    <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-tight">{conflict.msg}</span>
                                                                 </div>
                                                             )}
-                                                            <button disabled={!!conflict} onClick={async () => {
-                                                                    if(conflict) return;
+                                                            <button onClick={async () => {
                                                                     setIsSaving(true);
                                                                     try {
                                                                         const existingSource = overrides[selectedCell] || {};
@@ -1019,7 +1017,9 @@
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
                                                                     } catch(e) { alert("오류: " + e.message); }
                                                                     setIsSaving(false);
-                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>달력에 반영</button>
+                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? (conflict.severity === 'conflict' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700') : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
+                                                                {conflict ? '경고 무시하고 반영' : '달력에 반영'}
+                                                            </button>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-6">
@@ -1033,16 +1033,17 @@
                                                                         {SPECIALISTS.filter(s=>s.id!=='external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
                                                                     {conflict && (
-                                                                        <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600 animate-in">
-                                                                            <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-none">{conflict.msg}</span>
+                                                                        <div className={`flex items-center gap-2 p-4 rounded-2xl border animate-in ${conflict.severity === 'conflict' ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                                                                            <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-tight">{conflict.msg}</span>
                                                                         </div>
                                                                     )}
-                                                                    <button disabled={!!conflict} onClick={async () => {
-                                                                        if(conflict) return;
+                                                                    <button onClick={async () => {
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, type: newRegType, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>달력에 반영</button>
+                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
+                                                                        {conflict ? '경고 무시하고 반영' : '달력에 반영'}
+                                                                    </button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="space-y-4 animate-in">
@@ -1051,16 +1052,18 @@
                                                                         {SPECIALISTS.filter(s => s.id === 'external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
                                                                     {conflict && (
-                                                                        <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600 animate-in">
-                                                                            <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-none">{conflict.msg}</span>
+                                                                        <div className={`flex items-center gap-2 p-4 rounded-2xl border animate-in ${conflict.severity === 'conflict' ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                                                                            <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-tight">{conflict.msg}</span>
                                                                         </div>
                                                                     )}
-                                                                    <button disabled={!!conflict || !newRegTitle} onClick={async () => {
-                                                                        if(conflict || !newRegTitle) return;
+                                                                    <button disabled={!newRegTitle} onClick={async () => {
+                                                                        if(!newRegTitle) return;
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, title: newRegTitle, type: 'external', status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict || !newRegTitle ? 'bg-slate-100 text-slate-300' : 'bg-slate-900 text-white hover:bg-black active:scale-95'}`}>달력에 반영</button>
+                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${!newRegTitle ? 'bg-slate-100 text-slate-300' : (conflict ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-900 text-white hover:bg-black active:scale-95')}`}>
+                                                                        {conflict ? '경고 무시하고 반영' : '달력에 반영'}
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
