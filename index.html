@@ -651,7 +651,7 @@
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest leading-none">대상 학급 명칭</label>
-                                                <input type="text" value={fixedClass} onChange={e => setFixedClass(e.target.value)} placeholder="예: 5-1" className="w-full p-4 rounded-[1.5rem] bg-white/10 border-none text-white placeholder-white/30 font-black text-[13px] focus:bg-white focus:text-slate-800" />
+                                                <input type="text" value={fixedClass} onChange={e => setFixedClass(e.target.value)} placeholder="예: 5-1 또는 6학년" className="w-full p-4 rounded-[1.5rem] bg-white/10 border-none text-white placeholder-white/30 font-black text-[13px] focus:bg-white focus:text-slate-800" />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest leading-none">과목 선택</label>
@@ -913,7 +913,7 @@
                                 // 이동 혹은 현재 편집 중인 아이템 결정
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 
-                                // 중복 체크 로직 대폭 강화
+                                // 중복 체크 로직 대폭 강화 (타 학년 포함)
                                 const checkConflicts = (targetType, targetDate, targetPeriod) => {
                                     if (!targetType) return null;
                                     const date = new Date(targetDate + 'T00:00:00');
@@ -927,30 +927,29 @@
                                     
                                     // 2. 교사 중복 체크 (전담 과목일 때만 수행)
                                     if (targetType !== 'external') {
-                                        for (const otherCls of currentGradeClasses) {
-                                            // A. 마스터 시간표(기본 시간표) 체크
-                                            // 현재 반의 현재 교시는 스킵 (마스터를 덮어쓰는 것은 가능해야 함)
-                                            const baseMatchKey = `${dayIdx}-${targetPeriod}-${targetType}-${otherCls}`;
-                                            const baseMatch = baseSchedule[baseMatchKey];
-                                            
-                                            if (baseMatch && otherCls !== cls) {
-                                                return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 기본 시간표상 해당 시간에 ${otherCls} 수업 중입니다.` };
-                                            }
+                                        // A. 마스터 시간표(baseSchedule) 전체를 대조하여 타 학년 포함 확인
+                                        const masterConflict = Object.values(baseSchedule).find(v => 
+                                            v.dayIdx === dayIdx && v.period === targetPeriod && v.type === targetType && v.classLabel !== cls
+                                        );
+                                        if (masterConflict) {
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 마스터 시간표상 해당 시간에 ${masterConflict.classLabel} 수업 중입니다.` };
+                                        }
 
-                                            // B. 수동 등록(Override) 내역 체크
-                                            // 같은 반의 현재 교시는 스킵
-                                            if (otherCls === cls && targetDate === dateStr && targetPeriod === p) continue;
-                                            
-                                            const otherData = getCellData(targetDate, targetPeriod, otherCls);
-                                            const otherItem = otherData.override;
-                                            if (otherItem && otherItem.type === targetType) {
-                                                return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 날짜에 이미 ${otherCls} 수업이 잡혀있습니다.` };
-                                            }
+                                        // B. 이미 수동으로 등록된(override) 일정을 타 학급 포함 전체 확인
+                                        const overrideConflictKey = Object.keys(overrides).find(key => {
+                                            const [d, p, ...cParts] = key.split('-');
+                                            const c = cParts.join('-');
+                                            const v = overrides[key];
+                                            // 날짜/교시/과목이 같은데 학급만 다른 경우 (현재 학급의 현재 교시는 스킵)
+                                            return d === targetDate && parseInt(p) === targetPeriod && v.type === targetType && c !== cls;
+                                        });
+                                        if (overrideConflictKey) {
+                                            const c = overrideConflictKey.split('-').slice(2).join('-');
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 날짜에 이미 ${c} 수업이 잡혀있습니다.` };
                                         }
                                     }
                                     
-                                    // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크
-                                    // 현재 편집중인 아이템의 위치가 아닌 곳에 이미 override가 있는 경우 차단
+                                    // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크 (덮어쓰기 방지)
                                     if (targetCellInfo.override && (targetDate !== dateStr || targetPeriod !== p)) {
                                         return { msg: `${cls}반 해당 교시에 이미 수동 등록된 수업이 있습니다.` };
                                     }
