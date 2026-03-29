@@ -16,7 +16,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, Timestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore as getFS, doc as getD, setDoc as setD, getDoc as getDocD, collection as collD, onSnapshot as onS, deleteDoc as delD, Timestamp as TS, query as qD, orderBy as obD, limit as limD } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -536,7 +535,7 @@
                                         <div className="flex gap-1.5 p-1.5 bg-white/10 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar max-w-[320px]">
                                             <button onClick={() => setSelectedSpec('all')} className={`px-5 py-2.5 rounded-xl font-black transition-all whitespace-nowrap text-[12px] ${selectedSpec === 'all' ? 'bg-indigo-400 text-white shadow-md' : 'hover:bg-white/10'}`}>전체보기</button>
                                             {SPECIALISTS.filter(s=>s.id!=='external').map(s => (
-                                                <button key={s.id} onClick={() => setSelectedSpec(s.id)} className={`px-5 py-2.5 rounded-xl font-black transition-all whitespace-nowrap text-[12px] ${selectedSpec === s.id ? 'bg-white text-indigo-600 shadow-md' : 'hover:bg-white/10'}`}>{s.name}</button>
+                                                <button key={s.id} onClick={() => setSelectedSpec(s.id)} className={`px-4 py-2 rounded-xl font-black transition-all whitespace-nowrap text-[11px] ${selectedSpec === s.id ? 'bg-white text-indigo-600 shadow-md' : 'hover:bg-white/10'}`}>{s.name}</button>
                                             ))}
                                         </div>
                                         {selectedSpec !== 'all' && (
@@ -699,4 +698,4 @@
         root.render(<App />);
     </script>
 </body>
-</html>
+</html>eof
