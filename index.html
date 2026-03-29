@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V5.6 - 통합 시수 관리 시스템</title>
+    <title>전담 마크 Pro V5.7 - 통합 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -57,13 +57,14 @@
         .config-table td, .config-table th { min-width: 0 !important; width: 16.66% !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .btn-press:active { transform: scale(0.96); }
     </style>
 </head>
 <body>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V5.6 시스템 준비 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V5.7 최적화 중...</p>
         </div>
     </div>
 
@@ -98,7 +99,7 @@
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(window.fbError || null);
 
-            // 데이터 상태
+            // 데이터 상태 (DB 연동)
             const [baseSchedule, setBaseSchedule] = useState({});
             const [overrides, setOverrides] = useState({});
             const [targetHours, setTargetHours] = useState({ english: 30, science: 30, pe: 30, external: 0 });
@@ -115,6 +116,13 @@
             const [selectedSpec, setSelectedSpec] = useState('english');
             const [quickClass, setQuickClass] = useState('1반');
             const [isSaving, setIsSaving] = useState(false);
+
+            // 강사 수업 등록용 임시 상태
+            const [instTitle, setInstTitle] = useState("");
+            const [instDates, setInstDates] = useState("");
+            const [instClass, setInstClass] = useState("1반");
+            const [instStart, setInstStart] = useState(1);
+            const [instEnd, setInstEnd] = useState(1);
 
             useEffect(() => {
                 const checkInterval = setInterval(() => {
@@ -137,8 +145,6 @@
                     onSnapshot(path('base'), (s) => {
                         const d = {}; s.docs.forEach(doc => d[doc.id] = doc.data());
                         setBaseSchedule(d);
-                        // 처음 로드될 때만 편집용 스케줄에 복사
-                        if (Object.keys(editingSchedule).length === 0) setEditingSchedule(d);
                     }),
                     onSnapshot(path('overrides'), (s) => {
                         const d = {}; s.docs.forEach(doc => d[doc.id] = doc.data());
@@ -180,7 +186,7 @@
                 if (!input) return [];
                 const currentYear = new Date().getFullYear();
                 return input.split(/[,|\n]/).map(d => {
-                    let s = d.trim().replace(/\//g, '.');
+                    let s = d.trim().replace(/\s/g, '').replace(/\//g, '.'); // 공백 제거 추가
                     if (!s) return null;
                     if (s.split('.').length === 2) s = `${currentYear}.${s}`;
                     const date = new Date(s.replace(/\./g, '-') + 'T00:00:00');
@@ -204,7 +210,6 @@
                 return res;
             }, [overrides]);
 
-            // 강사 수업 중복 제거 및 리스트 정렬
             const recentInstructorLessons = useMemo(() => {
                 return Object.entries(overrides)
                     .filter(([key, val]) => val.type === 'external')
@@ -220,7 +225,7 @@
                     <header className="bg-white border-b px-4 py-1.5 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-1.5 rounded-lg text-white shadow-md"><SafeIcon name="ClipboardCheck" size={16} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V5.6</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V5.7 Final</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-0.5 rounded-xl">
                             {[
@@ -242,9 +247,9 @@
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => { const d = new Date(selectedDate + 'T00:00:00'); d.setDate(d.getDate()-1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1.5 border rounded-lg hover:bg-slate-50"><SafeIcon name="ChevronLeft" /></button>
+                                        <button onClick={() => { const d = new Date(selectedDate + 'T00:00:00'); d.setDate(d.getDate()-1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1.5 border rounded-lg hover:bg-slate-50 transition-all"><SafeIcon name="ChevronLeft" /></button>
                                         <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="font-black text-slate-700 border-none bg-transparent focus:ring-0 cursor-pointer text-xs" />
-                                        <button onClick={() => { const d = new Date(selectedDate + 'T00:00:00'); d.setDate(d.getDate()+1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1.5 border rounded-lg hover:bg-slate-50"><SafeIcon name="ChevronRight" /></button>
+                                        <button onClick={() => { const d = new Date(selectedDate + 'T00:00:00'); d.setDate(d.getDate()+1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1.5 border rounded-lg hover:bg-slate-50 transition-all"><SafeIcon name="ChevronRight" /></button>
                                     </div>
                                     <div className="flex bg-slate-100 p-0.5 rounded-lg">
                                         {['daily', 'weekly', 'monthly'].map(mode => (
@@ -298,7 +303,7 @@
                                                         const first = curr.getDate() - ((curr.getDay() + 6) % 7);
                                                         const colDate = new Date(curr); colDate.setDate(first + i);
                                                         const dateStr = colDate.toISOString().split('T')[0];
-                                                        return <th key={i} className="p-2 border-r min-w-[150px]">
+                                                        return <th key={i} className="p-2 border-r min-w-[140px]">
                                                             <div className="text-[9px] text-slate-300 font-bold">{dateStr.split('-').slice(1).join('.')}</div>
                                                             <div className="font-black text-slate-600 text-xs">{d}요일</div>
                                                         </th>;
@@ -381,82 +386,84 @@
                             </div>
                         )}
 
-                        {/* 2. 강사 수업 등록 */}
+                        {/* 2. 강사 수업 등록 (불러와서 수정 가능) */}
                         {activeTab === 'instructor' && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in">
                                 <div className="lg:col-span-2 bg-amber-600 p-6 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden h-fit">
                                     <div className="absolute -top-10 -right-10 opacity-10 rotate-12"><SafeIcon name="Layers" size={180}/></div>
                                     <h3 className="text-xl font-black mb-1 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Layers" size={20}/> 강사 수업 등록</h3>
-                                    <p className="text-amber-100 text-[10px] mb-8 font-medium relative z-10">연차시 수업이나 학년 공통 일정을 마크하세요.</p>
+                                    <p className="text-amber-100 text-[10px] mb-8 font-medium relative z-10 italic opacity-80 uppercase tracking-tighter">Enter recurring sessions or batch events.</p>
                                     <div className="space-y-6 relative z-10">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black opacity-60 ml-1 uppercase tracking-widest">수업명</label>
-                                                <input type="text" id="bulk-title" placeholder="수업제목" className="w-full p-3 rounded-2xl bg-white/10 border-none text-white placeholder-white/30 font-black focus:bg-white focus:text-slate-800 text-[12px] outline-none" />
+                                                <input type="text" value={instTitle} onChange={e => setInstTitle(e.target.value)} placeholder="수업제목" className="w-full p-3 rounded-2xl bg-white/10 border-none text-white placeholder-white/30 font-black focus:bg-white focus:text-slate-800 text-[12px] outline-none" />
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black opacity-60 ml-1 uppercase tracking-widest">대상 반</label>
-                                                <select id="bulk-class" className="w-full p-3 rounded-2xl bg-white/20 border-none text-white font-black text-[12px] cursor-pointer outline-none relative z-20">
+                                                <select value={instClass} onChange={e => setInstClass(e.target.value)} className="w-full p-3 rounded-2xl bg-white/20 border-none text-white font-black text-[12px] cursor-pointer outline-none relative z-20">
                                                     {TARGET_CLASSES.map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
                                                     <option value="학년공통" className="text-slate-800">학년전체</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black opacity-60 ml-1 uppercase tracking-widest">시작</label>
-                                                <select id="bulk-start" className="w-full p-3 rounded-2xl bg-white/20 border-none text-white font-black text-[12px] cursor-pointer outline-none relative z-20">
+                                                <select value={instStart} onChange={e => setInstStart(parseInt(e.target.value))} className="w-full p-3 rounded-2xl bg-white/20 border-none text-white font-black text-[12px] cursor-pointer outline-none relative z-20">
                                                     {PERIODS.map(p => <option key={p} value={p} className="text-slate-800">{p}교시</option>)}
                                                 </select>
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black opacity-60 ml-1 uppercase tracking-widest">종료</label>
-                                                <select id="bulk-end" className="w-full p-3 rounded-2xl bg-white/20 border-none text-white font-black text-[12px] cursor-pointer outline-none relative z-20">
+                                                <select value={instEnd} onChange={e => setInstEnd(parseInt(e.target.value))} className="w-full p-3 rounded-2xl bg-white/20 border-none text-white font-black text-[12px] cursor-pointer outline-none relative z-20">
                                                     {PERIODS.map(p => <option key={p} value={p} className="text-slate-800">{p}교시</option>)}
                                                 </select>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black opacity-60 ml-1 uppercase italic tracking-widest">날짜 입력 (예: 3/20, 27 / 4.10 / 2024.5.15 등)</label>
-                                            <textarea id="bulk-dates" placeholder="쉼표나 엔터로 구분해 여러 날짜를 입력하세요." className="w-full p-4 rounded-3xl bg-white/10 border-none text-white placeholder-white/30 font-black min-h-[100px] focus:bg-white focus:text-slate-800 text-[12px] outline-none"></textarea>
+                                            <textarea value={instDates} onChange={e => setInstDates(e.target.value)} placeholder="쉼표나 엔터로 구분해 여러 날짜를 입력하세요." className="w-full p-4 rounded-3xl bg-white/10 border-none text-white placeholder-white/30 font-black min-h-[100px] focus:bg-white focus:text-slate-800 text-[12px] outline-none"></textarea>
                                         </div>
                                         <button onClick={async () => {
-                                            const title = document.getElementById('bulk-title').value.trim();
-                                            const cls = document.getElementById('bulk-class').value;
-                                            const startP = parseInt(document.getElementById('bulk-start').value);
-                                            const endP = parseInt(document.getElementById('bulk-end').value);
-                                            const datesRaw = document.getElementById('bulk-dates').value;
-                                            const dates = parseSmartDates(datesRaw);
-                                            
-                                            if(!title || !cls || dates.length === 0) return alert("수업명과 날짜를 빠짐없이 입력하세요.");
-                                            if(startP > endP) return alert("시작 교시가 종료 교시보다 클 수 없습니다.");
+                                            const dates = parseSmartDates(instDates);
+                                            if(!instTitle || dates.length === 0) return alert("수업명과 유효한 날짜를 최소 하나 이상 입력하세요.");
+                                            if(instStart > instEnd) return alert("교시 설정이 올바르지 않습니다.");
 
                                             setIsSaving(true);
                                             try {
                                                 for(const d of dates) {
-                                                    const classesToSave = cls === '학년공통' ? TARGET_CLASSES : [cls];
+                                                    const classesToSave = instClass === '학년공통' ? TARGET_CLASSES : [instClass];
                                                     for(const singleCls of classesToSave) {
-                                                        for(let i = startP; i <= endP; i++) {
-                                                            await saveData('overrides', `${d}-${i}-${singleCls}`, { title, type: 'external', status: 'held', classLabel: singleCls });
+                                                        for(let i = instStart; i <= instEnd; i++) {
+                                                            await saveData('overrides', `${d}-${i}-${singleCls}`, { title: instTitle, type: 'external', status: 'held', classLabel: singleCls });
                                                         }
                                                     }
                                                 }
                                                 alert("수업이 등록되었습니다.");
-                                                document.getElementById('bulk-title').value = "";
-                                                document.getElementById('bulk-dates').value = "";
+                                                setInstTitle(""); setInstDates("");
                                             } catch (e) { alert("저장 실패: " + e.message); }
                                             setIsSaving(false);
-                                        }} disabled={isSaving} className={`w-full py-5 bg-white text-amber-600 font-black rounded-3xl shadow-xl transition-all active:scale-[0.98] text-[15px] tracking-widest ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-amber-50'}`}>
-                                            {isSaving ? 'Saving...' : '등록 실행 및 달력 반영'}
+                                        }} disabled={isSaving} className="w-full py-5 bg-white text-amber-600 font-black rounded-3xl shadow-xl transition-all active:scale-[0.98] text-[15px] tracking-widest hover:bg-amber-50 btn-press">
+                                            {isSaving ? 'Synching...' : '등록 실행 및 시수 반영'}
                                         </button>
                                     </div>
                                 </div>
                                 <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 h-fit">
-                                    <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2 italic uppercase"><SafeIcon name="List" className="text-amber-500" /> 최근 등록 수업 관리</h4>
-                                    <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                                    <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2 italic uppercase leading-none"><SafeIcon name="List" className="text-amber-500" /> 최근 등록 수업 관리</h4>
+                                    <div className="space-y-3 max-h-[420px] overflow-y-auto custom-scrollbar pr-2">
                                         {recentInstructorLessons.map(lesson => (
                                             <div key={lesson.key} className="p-3 bg-slate-50 rounded-2xl flex justify-between items-center group border border-transparent hover:border-amber-100 transition-all">
-                                                <div>
-                                                    <div className="text-[11px] font-black text-slate-800 truncate max-w-[120px]">{lesson.title}</div>
-                                                    <div className="text-[9px] text-slate-400 font-bold">{lesson.key.split('-').slice(0,3).join('.')} | {lesson.classLabel}</div>
+                                                <div onClick={() => {
+                                                    // 클릭 시 수정 모드로 전환
+                                                    setInstTitle(lesson.title);
+                                                    setInstClass(lesson.classLabel);
+                                                    const datePart = lesson.key.split('-').slice(0,3).join('.');
+                                                    setInstDates(datePart);
+                                                    setInstStart(parseInt(lesson.key.split('-')[3]) || 1);
+                                                    setInstEnd(parseInt(lesson.key.split('-')[3]) || 1);
+                                                    alert("해당 수업의 정보를 입력창으로 가져왔습니다.");
+                                                }} className="cursor-pointer flex-1">
+                                                    <div className="text-[11px] font-black text-slate-800 truncate max-w-[150px]">{lesson.title}</div>
+                                                    <div className="text-[9px] text-slate-400 font-bold tracking-tighter uppercase">{lesson.key.split('-').slice(0,3).join('.')} | {lesson.classLabel}</div>
                                                 </div>
                                                 <button onClick={async () => {
                                                     if(confirm("이 수업 기록을 삭제할까요?")) {
@@ -466,19 +473,19 @@
                                                 }} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"><SafeIcon name="Trash2" size={14} /></button>
                                             </div>
                                         ))}
-                                        {recentInstructorLessons.length === 0 && <div className="text-center py-10 text-xs text-slate-300 italic">등록된 수업이 없습니다.</div>}
+                                        {recentInstructorLessons.length === 0 && <div className="text-center py-10 text-xs text-slate-300 italic">No records found.</div>}
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* 3. 전담 시간 등록 */}
+                        {/* 3. 전담 시간 등록 (동기화 세척 로직 탑재) */}
                         {activeTab === 'config' && (
                             <div className="space-y-4 animate-in max-w-5xl mx-auto overflow-hidden">
                                 <div className="bg-indigo-600 p-6 rounded-[2.5rem] text-white flex flex-col lg:flex-row justify-between items-center gap-4 shadow-lg relative overflow-hidden">
                                     <div className="relative z-10 text-center lg:text-left">
-                                        <h3 className="text-xl font-black mb-1 italic tracking-tighter uppercase leading-none">전담 시간표 설정</h3>
-                                        <p className="opacity-80 text-[11px] font-medium">과목과 반을 선택하고 시간표를 클릭해 배치하세요.</p>
+                                        <h3 className="text-xl font-black mb-1 italic tracking-tighter uppercase leading-none">전담 시간표 마스터 세팅</h3>
+                                        <p className="opacity-80 text-[11px] font-medium leading-none">과목과 반을 선택하고 배치한 뒤 [저장하기]를 누르세요.</p>
                                     </div>
                                     <div className="flex flex-col gap-2 relative z-10 w-full lg:w-auto items-end">
                                         <div className="flex gap-1 p-1 bg-white/10 rounded-2xl border border-white/10 no-scrollbar">
@@ -493,9 +500,13 @@
                                     </div>
                                 </div>
                                 
-                                <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden w-full">
-                                    <table className="w-full border-collapse config-table">
-                                        <thead><tr className="bg-slate-50 border-b"><th className="p-4 border-r text-[10px] font-black text-slate-300 uppercase tracking-widest">교시</th>{DAYS.map(d=><th key={d} className="p-4 border-r font-black text-slate-700 text-[15px] italic tracking-tighter">{d}요일</th>)}</tr></thead>
+                                <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden w-full relative">
+                                    <div className="absolute top-4 left-4 flex gap-2 z-10">
+                                        <button onClick={() => { if(confirm("DB에서 기존 데이터를 불러오시겠습니까? 현재 편집 내용은 사라집니다.")) setEditingSchedule(baseSchedule); }} className="px-3 py-1.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg border hover:bg-white shadow-sm transition-all uppercase tracking-widest leading-none">Load DB</button>
+                                        <button onClick={() => { if(confirm("편집 내용을 싹 지우시겠습니까?")) setEditingSchedule({}); }} className="px-3 py-1.5 bg-rose-50 text-rose-400 text-[9px] font-black rounded-lg border border-rose-100 hover:bg-white shadow-sm transition-all uppercase tracking-widest leading-none">Reset All</button>
+                                    </div>
+                                    <table className="w-full border-collapse config-table mt-12">
+                                        <thead><tr className="bg-slate-50 border-b"><th className="p-4 border-r text-[10px] font-black text-slate-300 uppercase tracking-widest">교시</th>{DAYS.map(d=><th key={d} className="p-4 border-r font-black text-slate-700 text-[15px] italic tracking-tighter uppercase">{d}요일</th>)}</tr></thead>
                                         <tbody>
                                             {PERIODS.map(p=>(
                                                 <tr key={p} className="border-b last:border-0"><td className="p-4 bg-slate-50 border-r text-center font-black text-slate-200 text-5xl italic tracking-tighter leading-none">{p}</td>
@@ -511,7 +522,7 @@
                                                                     } else if (quickClass.trim() !== "") {
                                                                         setEditingSchedule({...editingSchedule, [key]: { type: selectedSpec, classLabel: quickClass }});
                                                                     }
-                                                                }} className={`w-full p-2 border-2 border-dashed rounded-[2rem] transition-all flex flex-col items-center justify-center min-h-[90px] ${isMine ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner' : (item ? 'border-slate-100 bg-slate-50/50 text-slate-300 text-[11px] italic leading-tight' : 'border-slate-50 text-slate-100')}`}>
+                                                                }} className={`w-full p-2 border-2 border-dashed rounded-[2rem] transition-all flex flex-col items-center justify-center min-h-[90px] ${isMine ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner' : (item ? 'border-slate-100 bg-slate-50/50 text-slate-300 text-[11px] italic leading-tight' : 'border-slate-50 text-slate-50')}`}>
                                                                     {isMine ? <span className="text-[16px] tracking-tighter">{item.classLabel}</span> : (item ? <span>({SPECIALISTS.find(s=>s.id===item.type)?.name})<br/>{item.classLabel}</span> : <SafeIcon name="Plus" size={24} />)}
                                                                 </button>
                                                             </td>
@@ -526,34 +537,41 @@
                                 <div className="bg-white p-6 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-8 items-center">
                                     <div className="flex-1 space-y-4 w-full">
                                         <h4 className="text-[18px] font-black text-slate-800 flex items-center gap-2 italic uppercase leading-none"><SafeIcon name="Save" className="text-indigo-600" size={20} /> 시간표 최종 저장 및 시수 반영</h4>
-                                        <p className="text-[12px] text-slate-400 font-medium">아래 저장 버튼을 누르면 즉시 [시수 관리] 탭의 달력에 반영됩니다.</p>
+                                        <p className="text-[12px] text-slate-400 font-medium">현재 보고 계신 시간표를 DB에 덮어씁니다. 지운 항목은 DB에서도 삭제됩니다.</p>
                                         <button onClick={async () => {
                                             setIsSaving(true);
-                                            const { db, appId, doc, setDoc, Timestamp } = window.fb;
+                                            const { db, appId, doc, setDoc, deleteDoc, Timestamp } = window.fb;
                                             try {
-                                                const promises = Object.entries(editingSchedule).map(([key, data]) => 
+                                                // 1. DB에 저장할 항목 업데이트
+                                                const savePromises = Object.entries(editingSchedule).map(([key, data]) => 
                                                     setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'base', key), { ...data, updatedAt: Timestamp.now() })
                                                 );
-                                                await Promise.all(promises);
-                                                alert("저장 완료! 달력에 즉시 반영되었습니다.");
+                                                
+                                                // 2. 편집 중 사라진 항목은 DB에서 삭제 (동기화 세척)
+                                                const deletePromises = Object.keys(baseSchedule)
+                                                    .filter(key => !editingSchedule[key])
+                                                    .map(key => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'base', key)));
+
+                                                await Promise.all([...savePromises, ...deletePromises]);
+                                                alert("데이터가 완벽하게 동기화되었습니다!");
                                                 setBaseSchedule(editingSchedule);
                                             } catch(e) { alert("저장 중 오류: " + e.message); }
                                             setIsSaving(false);
-                                        }} disabled={isSaving} className={`w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[16px] shadow-2xl transition-all active:scale-[0.98] uppercase tracking-tighter ${isSaving ? 'opacity-50' : 'hover:bg-black hover:scale-[1.01]'}`}>
-                                            {isSaving ? 'Synchronizing...' : '저장 및 달력에 즉시 반영'}
+                                        }} disabled={isSaving} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[16px] shadow-2xl transition-all active:scale-[0.98] uppercase tracking-tighter hover:bg-black hover:scale-[1.01] btn-press">
+                                            {isSaving ? 'Synchronizing DB...' : 'Save & Overwrite to Cloud'}
                                         </button>
                                     </div>
-                                    <div className="w-full lg:w-72 space-y-3 pt-6 border-t lg:border-t-0 lg:border-l lg:pl-8 border-slate-100">
-                                        <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none mb-4 flex items-center gap-2"><SafeIcon name="BarChart3" size={14}/> 목표 시수 설정</h5>
-                                        <div className="grid grid-cols-4 gap-3">
+                                    <div className="w-full lg:w-80 space-y-3 pt-6 border-t lg:border-t-0 lg:border-l lg:pl-8 border-slate-100">
+                                        <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none mb-4 flex items-center gap-2"><SafeIcon name="BarChart3" size={14}/> 목표 시수 설정 (1줄)</h5>
+                                        <div className="grid grid-cols-4 gap-2">
                                             {SPECIALISTS.map(s => (
                                                 <div key={s.id} className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 ml-1 leading-none">{s.name}</label>
-                                                    <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value)})} className="w-full p-2 rounded-xl bg-slate-50 border-none font-black text-indigo-600 text-[14px] text-center shadow-inner" />
+                                                    <label className="text-[9px] font-black text-slate-400 ml-1 leading-none italic uppercase tracking-tighter">{s.name}</label>
+                                                    <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value) || 0})} className="w-full p-2 rounded-xl bg-slate-50 border-none font-black text-indigo-600 text-[14px] text-center shadow-inner" />
                                                 </div>
                                             ))}
                                         </div>
-                                        <button onClick={() => { saveData('academic', 'targets', targetHours); alert("목표 시수가 저장되었습니다."); }} className="w-full py-2 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] hover:bg-slate-200 mt-2 transition-all">설정 저장</button>
+                                        <button onClick={() => { saveData('academic', 'targets', targetHours); alert("목표 시수가 저장되었습니다."); }} className="w-full py-2.5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] hover:bg-slate-200 mt-2 transition-all shadow-sm uppercase italic tracking-widest">Update Targets</button>
                                     </div>
                                 </div>
                             </div>
@@ -577,7 +595,7 @@
                                                                 <div className={`w-3.5 h-3.5 rounded-full ${spec.color} shadow-sm`}></div>
                                                                 <span className="font-bold text-slate-500 text-[14px]">{spec.name}</span>
                                                             </div>
-                                                            <span className="font-black text-slate-900 text-3xl leading-none">{count} <span className="text-slate-300 font-bold text-[13px] tracking-tighter italic">/ {target}</span></span>
+                                                            <span className="font-black text-slate-900 text-3xl leading-none tracking-tighter">{count} <span className="text-slate-300 font-bold text-[13px] tracking-tighter italic">/ {target}</span></span>
                                                         </div>
                                                         <div className="h-4 bg-slate-100 rounded-full overflow-hidden border-2 border-white shadow-inner">
                                                             <div className={`h-full ${spec.color} transition-all duration-1000 shadow-lg`} style={{ width: `${percent}%` }}></div>
@@ -592,13 +610,13 @@
                                                         <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm"></div>
                                                         <span className="font-bold text-slate-500 text-[14px]">강사 수업 누계</span>
                                                     </div>
-                                                    <span className="font-black text-amber-600 text-3xl leading-none">{stats[cls]?.external || 0} <span className="text-slate-300 font-bold text-[12px] tracking-tighter italic">차시</span></span>
+                                                    <span className="font-black text-amber-600 text-3xl leading-none tracking-tighter">{stats[cls]?.external || 0} <span className="text-slate-300 font-bold text-[12px] tracking-tighter italic">차시</span></span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
                                                     {stats[cls]?.externalLessons.map((l, i) => (
                                                         <span key={i} className="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-black rounded-full border border-amber-100 italic shadow-sm">#{l.title}</span>
                                                     ))}
-                                                    {stats[cls]?.externalLessons.length === 0 && <span className="text-[11px] text-slate-300 italic">진행된 수업이 없습니다.</span>}
+                                                    {stats[cls]?.externalLessons.length === 0 && <span className="text-[11px] text-slate-300 italic uppercase">No record.</span>}
                                                 </div>
                                             </div>
                                         </div>
@@ -613,7 +631,7 @@
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
                             <div className="bg-white w-full max-w-xs rounded-[4rem] p-10 shadow-2xl space-y-8 animate-in zoom-in-95">
                                 <div className="text-center space-y-2">
-                                    <h2 className="text-2xl font-black text-slate-800 tracking-tighter italic leading-none">Status Update</h2>
+                                    <h2 className="text-2xl font-black text-slate-800 tracking-tighter italic leading-none uppercase">Status Check</h2>
                                     <p className="text-[11px] text-slate-400 font-extrabold uppercase tracking-[0.2em] mt-2">{selectedCell?.replace(/-/g, '.')}</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-5">
@@ -623,14 +641,14 @@
                                         const data = getCellData(d, p, c);
                                         if(data) saveData('overrides', selectedCell, { ...data, status: 'held', classLabel: c }).then(() => setIsModalOpen(false));
                                         else alert("시간표에 배정된 수업이 아닙니다.");
-                                    }} className="p-10 bg-indigo-50 text-indigo-600 rounded-[3rem] border-2 border-indigo-100 font-black flex flex-col items-center gap-3 transition-all hover:bg-indigo-100 active:scale-95 shadow-lg shadow-indigo-100/50"><SafeIcon name="CheckCircle2" size={40}/>완료</button>
+                                    }} className="p-10 bg-indigo-50 text-indigo-600 rounded-[3rem] border-2 border-indigo-100 font-black flex flex-col items-center gap-3 transition-all hover:bg-indigo-100 active:scale-95 shadow-lg shadow-indigo-100/50 btn-press"><SafeIcon name="CheckCircle2" size={40}/>완료</button>
                                     <button onClick={() => {
                                         const parts = selectedCell.split('-');
                                         const [d, p, c] = [`${parts[0]}-${parts[1]}-${parts[2]}`, parseInt(parts[3]), parts[4]];
                                         const data = getCellData(d, p, c);
                                         if(data) saveData('overrides', selectedCell, { ...data, status: 'cancelled', classLabel: c }).then(() => setIsModalOpen(false));
                                         else setIsModalOpen(false);
-                                    }} className="p-10 bg-rose-50 text-rose-600 rounded-[3rem] border-2 border-rose-100 font-black flex flex-col items-center gap-3 transition-all hover:bg-rose-100 active:scale-95 shadow-lg shadow-rose-100/50"><SafeIcon name="X" size={40}/>결손</button>
+                                    }} className="p-10 bg-rose-50 text-rose-600 rounded-[3rem] border-2 border-rose-100 font-black flex flex-col items-center gap-3 transition-all hover:bg-rose-100 active:scale-95 shadow-lg shadow-rose-100/50 btn-press"><SafeIcon name="X" size={40}/>결손</button>
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => { window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'overrides', selectedCell)); setIsModalOpen(false); }} className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black hover:bg-slate-200 transition-all text-[11px] uppercase tracking-widest leading-none">Reset</button>
@@ -643,7 +661,7 @@
                     {/* 실시간 상태 표시바 */}
                     <div className="fixed bottom-6 right-6 flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-80 scale-90">
                         <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Cloud Active</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic tracking-tighter">Live Sync Ready</span>
                     </div>
                 </div>
             );
