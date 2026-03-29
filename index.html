@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V6.0 - 통합 시수 & 학사 관리 시스템</title>
+    <title>전담 마크 Pro V6.1 - 통합 시수 & 학사 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -58,14 +58,13 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .btn-press:active { transform: scale(0.96); }
-        .active-ring { ring: 2px; ring-offset: 2px; ring-indigo-500; }
     </style>
 </head>
 <body>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V6.0 엔진 최적화 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V6.1 엔진 최적화 중...</p>
         </div>
     </div>
 
@@ -100,25 +99,21 @@
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(window.fbError || null);
 
-            // 데이터 상태 (DB 연동)
             const [baseSchedule, setBaseSchedule] = useState({});
             const [overrides, setOverrides] = useState({});
             const [targetHours, setTargetHours] = useState({ english: 30, science: 30, pe: 30 });
             
-            // UI 상태 - 학사 일정 확인의 주별 보기를 메인으로 설정
             const [activeTab, setActiveTab] = useState('academic'); 
             const [viewMode, setViewMode] = useState('weekly'); 
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [selectedCell, setSelectedCell] = useState(null);
             
-            // 전담 설정용 편집 상태
             const [editingSchedule, setEditingSchedule] = useState({});
             const [selectedSpec, setSelectedSpec] = useState('all'); 
             const [quickClass, setQuickClass] = useState('1반');
             const [isSaving, setIsSaving] = useState(false);
 
-            // 강사 수업 등록 상태
             const [instTitle, setInstTitle] = useState("");
             const [instDates, setInstDates] = useState("");
             const [instClass, setInstClass] = useState("1반");
@@ -164,12 +159,14 @@
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id), { ...data, updatedAt: Timestamp.now() });
             };
 
-            // 주간 날짜 계산 로직 (2026-03-23 기준 월요일 오류 수정)
+            // 월요일 계산 로직 보강 (JS Date 객체의 일요일=0 처리를 월요일=1 기준으로 재계산)
             const getMonday = (d) => {
                 const date = new Date(d + 'T00:00:00');
                 const day = date.getDay();
-                const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-                return new Date(date.setDate(diff)).toISOString().split('T')[0];
+                // 일요일(0)이면 6일을 빼고, 나머지는 (day-1)일을 뺌
+                const diff = date.getDate() - (day === 0 ? 6 : day - 1);
+                const result = new Date(date.setDate(diff));
+                return result.toISOString().split('T')[0];
             };
 
             const getCellData = (dateStr, period, classLabel) => {
@@ -179,7 +176,7 @@
                 
                 const override = overrides[overrideKey];
                 
-                // baseSchedule 전담 시간표 검색 최적화
+                // baseSchedule(전담 고정 시간표) 검색
                 const baseMatch = Object.values(baseSchedule).find(v => 
                     v.dayIdx === dayIdx && v.period === period && v.classLabel === classLabel
                 );
@@ -199,27 +196,29 @@
                     let s = d.trim().replace(/\//g, '.');
                     if (!s) return null;
                     const parts = s.split('.');
-                    // "3.30" 처럼 연도 없는 경우 보정
                     if (parts.length === 2) {
-                        const month = parts[0].padStart(2, '0');
-                        const day = parts[1].padStart(2, '0');
-                        s = `${currentYear}-${month}-${day}`;
+                        s = `${currentYear}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                     } else if (parts.length === 3) {
-                        const year = parts[0];
-                        const month = parts[1].padStart(2, '0');
-                        const day = parts[2].padStart(2, '0');
-                        s = `${year}-${month}-${day}`;
+                        s = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
                     }
                     const date = new Date(s + 'T00:00:00');
                     return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
                 }).filter(d => d);
             };
 
+            const recentInstructorLessons = useMemo(() => {
+                return Object.entries(overrides)
+                    .filter(([key, val]) => val?.type === 'external')
+                    .map(([key, val]) => ({ key, ...val }))
+                    .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
+                    .slice(0, 10);
+            }, [overrides]);
+
             const stats = useMemo(() => {
                 const res = {};
                 TARGET_CLASSES.forEach(c => res[c] = { english: 0, science: 0, pe: 0, external: 0, externalLessons: [] });
                 Object.values(overrides).forEach(v => {
-                    if (v.status === 'held' && res[v.classLabel]) {
+                    if (v && v.status === 'held' && res[v.classLabel]) {
                         res[v.classLabel][v.type]++;
                         if (v.type === 'external' && v.title) {
                             if (!res[v.classLabel].externalLessons.some(l => l.title === v.title)) {
@@ -238,7 +237,7 @@
                     <header className="bg-white border-b px-4 py-1.5 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-1.5 rounded-lg text-white shadow-md"><SafeIcon name="ClipboardCheck" size={16} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V6.0</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V6.1 Final</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-0.5 rounded-xl">
                             {[
@@ -274,16 +273,7 @@
                                             }} className="p-2 border rounded-xl hover:bg-slate-50 transition-all btn-press"><SafeIcon name="ChevronRight" size={18} /></button>
                                         </div>
                                         <div className="h-6 w-px bg-slate-200 hidden md:block mx-2"></div>
-                                        {/* 전담 시간 반영 아이콘 버튼 */}
-                                        <button 
-                                            onClick={() => {
-                                                // 전담 시간표를 시각적으로 확인하기 위해 config 탭의 'all' 탭 데이터가 이미 getCellData에 반영되어 있음.
-                                                // 여기서는 새로고침 효과를 주기 위해 상태를 리셋하거나 알림을 줌.
-                                                alert("클라우드 전담 시간표를 동기화했습니다.");
-                                                window.location.reload(); 
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[11px] hover:bg-indigo-100 transition-all btn-press shadow-sm"
-                                        >
+                                        <button onClick={() => { alert("최신 시간표를 동기화했습니다."); window.location.reload(); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[11px] hover:bg-indigo-100 transition-all btn-press shadow-sm">
                                             <SafeIcon name="RefreshCw" size={14} /> 전담 시간표 반영
                                         </button>
                                     </div>
@@ -433,7 +423,7 @@
                                 <div className="lg:col-span-2 bg-amber-600 p-8 rounded-[3rem] shadow-xl text-white relative overflow-hidden h-fit">
                                     <div className="absolute -top-10 -right-10 opacity-10 rotate-12"><SafeIcon name="Layers" size={180}/></div>
                                     <h3 className="text-xl font-black mb-1 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Layers" size={24}/> 강사 수업 등록</h3>
-                                    <p className="text-amber-100 text-[11px] mb-8 font-medium relative z-10 opacity-80 uppercase tracking-tighter">Enter external lesson schedules for batches.</p>
+                                    <p className="text-amber-100 text-[11px] mb-8 font-medium relative z-10 opacity-80 uppercase tracking-tighter">Enter external instructor schedules for batches.</p>
                                     <div className="space-y-6 relative z-10">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             <div className="space-y-2">
@@ -468,7 +458,6 @@
                                             const dates = parseSmartDates(instDates);
                                             if(!instTitle || dates.length === 0) return alert("수업명과 유효한 날짜(예: 3/30)를 확인하세요.");
                                             if(instStart > instEnd) return alert("교시 설정이 올바르지 않습니다.");
-
                                             setIsSaving(true);
                                             try {
                                                 for(const d of dates) {
@@ -538,7 +527,7 @@
                                                 alert("클라우드 저장 및 달력 반영 완료!"); setBaseSchedule(editingSchedule);
                                             } catch(e) { alert("저장 실패: " + e.message); }
                                             setIsSaving(false);
-                                        }} disabled={isSaving || selectedSpec === 'all'} className={`px-6 py-3.5 bg-white text-indigo-600 rounded-[1.5rem] font-black text-xs shadow-xl transition-all btn-press flex items-center gap-2 ${selectedSpec === 'all' ? 'opacity-50 grayscale' : 'hover:scale-105'}`}>
+                                        }} disabled={isSaving || selectedSpec === 'all'} className={`px-6 py-3.5 bg-white text-indigo-600 rounded-[1.5rem] font-black text-xs shadow-xl transition-all btn-press flex items-center gap-2 ${selectedSpec === 'all' ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:scale-105'}`}>
                                             <SafeIcon name="CloudUpload" size={16}/> Save to Cloud
                                         </button>
                                         <div className="flex gap-1.5 p-1.5 bg-white/10 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar max-w-[320px]">
@@ -594,14 +583,7 @@
                                                                             setEditingSchedule({...editingSchedule, [key]: { type: selectedSpec, classLabel: quickClass, dayIdx: dIdx, period: p }});
                                                                         }
                                                                     }} className={`w-full p-3 border-2 border-dashed rounded-[2.5rem] transition-all flex flex-col items-center justify-center min-h-[95px] ${item ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner active:scale-95' : 'border-slate-50 text-slate-50 hover:border-indigo-100 hover:text-indigo-100 active:scale-95'}`}>
-                                                                        {item ? (
-                                                                            <span className="text-[17px] tracking-tighter leading-none">{item.classLabel}</span>
-                                                                        ) : (
-                                                                            <div className="flex flex-col items-center opacity-40">
-                                                                                <SafeIcon name="Plus" size={28} />
-                                                                                {others.length > 0 && <span className="text-[9px] font-black mt-1 text-slate-300">({others.length}개 중첩)</span>}
-                                                                            </div>
-                                                                        )}
+                                                                        {item ? <span className="text-[17px] tracking-tighter leading-none">{item.classLabel}</span> : <div className="flex flex-col items-center opacity-40"><SafeIcon name="Plus" size={28} />{others.length > 0 && <span className="text-[9px] font-black mt-1 text-slate-300">({others.length}개 중첩)</span>}</div>}
                                                                     </button>
                                                                 </td>
                                                             );
@@ -613,22 +595,18 @@
                                     </table>
                                 </div>
 
-                                <div className="bg-white p-7 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-8 items-center">
-                                    <div className="w-full lg:w-[450px] space-y-4 pt-2">
-                                        <h5 className="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none mb-4 flex items-center gap-2"><SafeIcon name="BarChart3" size={16}/> 목표 시수 설정</h5>
+                                <div className="bg-white p-7 rounded-[3rem] border border-slate-200 shadow-sm flex items-center justify-center">
+                                    <div className="w-full lg:w-[450px] space-y-4">
+                                        <h5 className="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none mb-4 flex items-center gap-2 justify-center"><SafeIcon name="BarChart3" size={16}/> 목표 시수 설정</h5>
                                         <div className="grid grid-cols-3 gap-4">
                                             {SPECIALISTS.filter(s=>['english', 'science', 'pe'].includes(s.id)).map(s => (
-                                                <div key={s.id} className="space-y-1.5">
+                                                <div key={s.id} className="space-y-1.5 text-center">
                                                     <label className="text-[10px] font-black text-slate-400 ml-1 leading-none uppercase tracking-tighter">{s.name}</label>
-                                                    <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value) || 0})} className="w-full p-2.5 rounded-2xl bg-slate-50 border-none font-black text-indigo-600 text-[14px] text-center shadow-inner outline-none focus:ring-2 focus:ring-indigo-100" />
+                                                    <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value) || 0})} className="w-full p-2.5 rounded-2xl bg-slate-50 border-none font-black text-indigo-600 text-[13px] text-center shadow-inner outline-none focus:ring-2 focus:ring-indigo-100" />
                                                 </div>
                                             ))}
                                         </div>
                                         <button onClick={() => { saveData('academic', 'targets', targetHours); alert("목표 시수가 저장되었습니다."); }} className="w-full py-3 bg-slate-100 text-slate-400 rounded-2xl font-black text-[11px] hover:bg-slate-200 transition-all uppercase italic tracking-widest shadow-sm">Update Semester Targets</button>
-                                    </div>
-                                    <div className="flex-1 bg-slate-50 p-8 rounded-[2.5rem] w-full text-center border border-slate-100">
-                                        <h4 className="text-[15px] font-black text-slate-800 mb-2 italic tracking-tighter leading-none">Cloud Sync Helper</h4>
-                                        <p className="text-[12px] text-slate-400 font-medium leading-relaxed">전체보기 탭에서 동학년 모든 전담 수업 배치를 최종 확인하세요.<br/>[Save to Cloud] 클릭 시 '학사 일정 확인' 달력에 시각적으로 반영됩니다.</p>
                                     </div>
                                 </div>
                             </div>
@@ -709,7 +687,7 @@
 
                     <div className="fixed bottom-8 right-8 flex items-center gap-3 bg-slate-900 text-white px-6 py-3.5 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-90 hover:opacity-100 transition-opacity scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[11px] font-black tracking-widest uppercase leading-none italic">Cloud Sync Engine V6.0</span>
+                        <span className="text-[11px] font-black tracking-widest uppercase leading-none italic">Cloud Sync Engine V6.1</span>
                     </div>
                 </div>
             );
