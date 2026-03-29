@@ -86,7 +86,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.11 최종 버전 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.11 로딩 중...</p>
         </div>
     </div>
 
@@ -263,7 +263,7 @@
                 );
                 const baseMatch = baseMatchEntry ? { id: baseMatchEntry[0], ...baseMatchEntry[1] } : null;
 
-                const hasInstructor = override && override.type && override.type !== 'none' && !override.hideBase;
+                const hasInstructor = override && override.type && override.type !== 'none';
                 const hideBase = override && override.hideBase;
 
                 return {
@@ -910,31 +910,32 @@
                                 const cls = parts.slice(4).join('-'); 
                                 const cellData = getCellData(dateStr, p, cls);
                                 
+                                // 이동 혹은 현재 편집 중인 아이템 결정
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 
-                                // 중복 체크 로직 대폭 강화 및 정교화 (전체 학급 대상)
+                                // 중복 체크 로직 대폭 강화 및 정밀화
                                 const checkConflicts = (targetType, targetDate, targetPeriod) => {
                                     if (!targetType) return null;
                                     const date = new Date(targetDate + 'T00:00:00');
                                     const dayIdx = (date.getDay() + 6) % 7;
+                                    const targetCellInfo = getCellData(targetDate, targetPeriod, cls);
                                     
                                     // 1. 학교 일정 및 방학 체크
-                                    const academic = academicEvents[targetDate];
-                                    if (HOLIDAYS_2026[targetDate] || academic?.isHoliday || academic?.isEvent || isVacationDay(targetDate)) {
-                                        return { msg: '선택하신 날짜는 공휴일, 행사 또는 방학 기간입니다.', severity: 'warning' };
+                                    if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) {
+                                        return { msg: '학교 일정/방학 기간입니다. (입력 시 주의)', severity: 'warning' };
                                     }
                                     
-                                    // 2. 교사 중복 체크 (전담 과목일 경우만)
+                                    // 2. 교사 중복 체크 (타 학급/타 학년 포함 전수 조사)
                                     if (targetType !== 'external') {
-                                        // A. 마스터 시간표 대조 (전체 학급 전수 조사)
+                                        // A. 마스터 시간표(baseSchedule) 전수 대조
                                         const masterConflict = Object.values(baseSchedule).find(v => 
-                                            v.dayIdx === dayIdx && v.period === targetPeriod && v.type === targetType && v.classLabel !== cls
+                                            v.dayIdx === dayIdx && v.period === targetPeriod && String(v.type) === String(targetType) && v.classLabel !== cls
                                         );
                                         if (masterConflict) {
-                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 마스터 시간표상 [${masterConflict.classLabel}] 수업 중입니다.`, severity: 'conflict' };
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 마스터 시간표상 해당 시간에 [${masterConflict.classLabel}] 수업 중입니다.`, severity: 'conflict' };
                                         }
 
-                                        // B. 수동 변경(Overrides) 내역 대조 (전체 학급 전수 조사)
+                                        // B. 수동 등록된(override) 일정 정밀 확인 (날짜 하이픈 고려 파싱)
                                         const overrideConflictKey = Object.keys(overrides).find(key => {
                                             const kParts = key.split('-');
                                             const kDate = `${kParts[0]}-${kParts[1]}-${kParts[2]}`;
@@ -942,22 +943,18 @@
                                             const kClass = kParts.slice(4).join('-');
                                             const v = overrides[key];
                                             
-                                            // 날짜/교시 일치 && 과목 일치 && 내 반이 아님 && 유효한 수업(취소상태 아님)
-                                            return kDate === targetDate && kPeriod === targetPeriod && v.type === targetType && kClass !== cls && !v.hideBase && v.type;
+                                            // 1) 날짜/교시 일치, 2) 과목 일치, 3) 현재 편집중인 반이 아님, 4) 실제로 타입이 있는 유효한 수업임
+                                            return kDate === targetDate && kPeriod === targetPeriod && String(v.type) === String(targetType) && kClass !== cls && !v.hideBase && v.type;
                                         });
                                         if (overrideConflictKey) {
                                             const confClass = overrideConflictKey.split('-').slice(4).join('-');
-                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 이미 [${confClass}] 수업이 수동 등록되어 있습니다.`, severity: 'conflict' };
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 일시에 이미 [${confClass}] 수업이 수동 등록되어 있습니다.`, severity: 'conflict' };
                                         }
                                     }
                                     
-                                    // 3. 현재 반의 기존 수업 존재 여부 (덮어쓰기 경고)
-                                    if (targetDate !== dateStr || targetPeriod !== p) {
-                                        const targetCellInfo = getCellData(targetDate, targetPeriod, cls);
-                                        if (targetCellInfo.override || targetCellInfo.base) {
-                                            const existingSub = (targetCellInfo.override || targetCellInfo.base);
-                                            return { msg: `해당 칸에는 이미 [${existingSub.title || SPECIALISTS.find(s=>s.id===existingSub.type)?.name}] 수업이 배정되어 있습니다.`, severity: 'warning' };
-                                        }
+                                    // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크 (덮어쓰기 경고)
+                                    if (targetCellInfo.override && (targetDate !== dateStr || targetPeriod !== p)) {
+                                        return { msg: `해당 칸에는 이미 [${targetCellInfo.override.title || SPECIALISTS.find(s=>s.id===targetCellInfo.override.type)?.name}] 수업이 배정되어 있습니다.`, severity: 'warning' };
                                     }
                                     
                                     return null;
@@ -965,8 +962,11 @@
 
                                 const mD = moveDate || dateStr; 
                                 const mP = movePeriod || p;
+                                
+                                // 현재 선택된 모드에 따른 타입 결정
                                 const activeType = currentItem ? currentItem.type : (newRegMode === 'master' ? newRegType : 'external');
                                 const conflict = checkConflicts(activeType, mD, mP);
+                                
                                 const currentSubjectName = currentItem ? (currentItem.title || SPECIALISTS.find(s=>s.id===currentItem.type)?.name) : "없음";
 
                                 return (
