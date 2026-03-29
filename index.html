@@ -72,6 +72,7 @@
         .calendar-day { background: white; min-height: 120px; padding: 10px; transition: background 0.2s; }
         .calendar-day.outside { background: #f1f5f9; color: #cbd5e1; }
         .calendar-day.today { background: #eff6ff; }
+        .calendar-day.conflict-row { background: #fff1f2; }
         .calendar-header-day { background: #f8fafc; padding: 10px; text-align: center; font-size: 10px; font-weight: 900; color: #64748b; border-bottom: 1px solid #e2e8f0; }
         
         .holiday-text { color: #e11d48 !important; }
@@ -162,6 +163,8 @@
             const [movePeriod, setMovePeriod] = useState(1);
             const [activeMoveItem, setActiveMoveItem] = useState(null); 
             const [newRegMode, setNewRegMode] = useState('master'); 
+            const [newRegType, setNewRegType] = useState('english');
+            const [newRegTitle, setNewRegTitle] = useState('');
 
             const [instTitle, setInstTitle] = useState("");
             const [instDates, setInstDates] = useState("");
@@ -252,7 +255,6 @@
                     if (academic.isEvent) return { type: 'event', title: academic.title, isEvent: true };
                 }
 
-                // 방학 체크
                 if (isVacationDay(dateStr)) return { type: 'vacation', title: '방학 기간', isVacation: true };
 
                 const override = overrides[overrideKey];
@@ -516,13 +518,11 @@
                                                                         <td key={cls} className={`p-2 border-r last:border-0 align-middle min-h-[110px] relative transition-all bg-white`}>
                                                                             {cell.isConflict ? (
                                                                                 <div className="flex h-full min-h-[90px] gap-1 animate-in">
-                                                                                    {/* 전담 칸 붉은 테두리 유지 */}
                                                                                     <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('base'); setIsSidebarOpen(true); }} 
                                                                                         className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specBase?.bg} ${specBase?.text} border border-rose-300 conflict-glow shadow-md opacity-80`}>
                                                                                         <span className="text-[9px] font-black opacity-40 mb-1 uppercase">전담</span>
                                                                                         <span className="text-[11px] font-black">{specBase?.name}</span>
                                                                                     </div>
-                                                                                    {/* 강사 칸 붉은 테두리 유지 */}
                                                                                     <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem('override'); setIsSidebarOpen(true); }} 
                                                                                         className={`flex-1 flex flex-col justify-center items-center p-2 rounded-2xl cursor-pointer hover:brightness-95 transition-all ${specOverride?.bg} ${specOverride?.text} border border-rose-300 conflict-glow shadow-md`}>
                                                                                         <span className="text-[9px] font-black opacity-40 mb-1 uppercase">강사</span>
@@ -532,7 +532,6 @@
                                                                             ) : cell.override || cell.base ? (
                                                                                 <div onClick={() => { setSelectedCell(`${selectedDate}-${p}-${cls}`); setActiveMoveItem(cell.override ? 'override' : 'base'); setIsSidebarOpen(true); }} 
                                                                                     className={`h-full min-h-[90px] flex flex-col justify-center items-center p-4 rounded-3xl cursor-pointer hover:brightness-95 transition-all border shadow-sm ${(cell.override ? specOverride : specBase)?.bg} ${(cell.override ? specOverride : specBase)?.text} ${(cell.override ? specOverride : specBase)?.border}`}>
-                                                                                    {/* 레이블 표시 로직 수정: 교체 데이터의 타입이 external이면 강사, 그 외는 전담 */}
                                                                                     <div className="text-[11px] font-black opacity-30 uppercase tracking-widest mb-1">
                                                                                         {cell.override ? (cell.override.type === 'external' ? '강사' : '전담') : '전담'}
                                                                                     </div>
@@ -735,92 +734,6 @@
                                         </table>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
-                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 h-fit">
-                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 개학/방학 및 시수 설정</h4>
-                                        <div className="space-y-8">
-                                            <div className="grid grid-cols-2 gap-4 border-b pb-6">
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 개학식</label>
-                                                    <input type="date" value={semesterConfig.s1Start} onChange={e => setSemesterConfig({...semesterConfig, s1Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 방학식</label>
-                                                    <input type="date" value={semesterConfig.s1End} onChange={e => setSemesterConfig({...semesterConfig, s1End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 개학식</label>
-                                                    <input type="date" value={semesterConfig.s2Start} onChange={e => setSemesterConfig({...semesterConfig, s2Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 방학식</label>
-                                                    <input type="date" value={semesterConfig.s2End} onChange={e => setSemesterConfig({...semesterConfig, s2End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="space-y-6">
-                                                <div className="space-y-4">
-                                                    <h5 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest italic">1학기 목표 시수 (반별)</h5>
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        {SPECIALISTS.filter(s => s.id !== 'external').map(s => (
-                                                            <div key={s.id} className="space-y-1">
-                                                                <label className="text-[10px] font-black text-slate-400 uppercase">{s.name}</label>
-                                                                <input type="number" value={targetHours.s1?.[s.id] || 0} onChange={e => setTargetHours({...targetHours, s1: {...targetHours.s1, [s.id]: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-4">
-                                                    <h5 className="text-[11px] font-black text-rose-600 uppercase tracking-widest italic">2학기 목표 시수 (반별)</h5>
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        {SPECIALISTS.filter(s => s.id !== 'external').map(s => (
-                                                            <div key={s.id} className="space-y-1">
-                                                                <label className="text-[10px] font-black text-slate-400 uppercase">{s.name}</label>
-                                                                <input type="number" value={targetHours.s2?.[s.id] || 0} onChange={e => setTargetHours({...targetHours, s2: {...targetHours.s2, [s.id]: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <button onClick={async () => {
-                                                await saveData('academic', 'semesters', semesterConfig);
-                                                await saveData('academic', 'targets', targetHours);
-                                                alert("저장 완료!");
-                                            }} className="w-full py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black shadow-lg">설정 저장</button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 h-fit">
-                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="AlertTriangle" className="text-rose-500"/> 학사 일정(휴업/행사) 등록</h4>
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <input type="date" id="event-date" defaultValue={selectedDate} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                                <input type="text" id="event-title" placeholder="일정명" className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
-                                            </div>
-                                            <div className="flex bg-slate-100 p-1 rounded-2xl">
-                                                <button id="btn-type-hol" onClick={() => { window.event_type = 'hol'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-rose-600 shadow-sm">공휴일/휴업일</button>
-                                                <button id="btn-type-ev" onClick={() => { window.event_type = 'ev'; document.getElementById('btn-type-ev').className = 'flex-1 py-2 rounded-xl text-[11px] font-black bg-white text-indigo-600 shadow-sm'; document.getElementById('btn-type-hol').className = 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400'; }} className="flex-1 py-2 rounded-xl text-[11px] font-black text-slate-400">학교 행사</button>
-                                            </div>
-                                            <button onClick={async () => {
-                                                const d = document.getElementById('event-date').value;
-                                                const t = document.getElementById('event-title').value;
-                                                const type = window.event_type || 'hol';
-                                                if(!d || !t) return alert("입력 오류");
-                                                await saveData('academic', d, { title: t, isHoliday: type === 'hol', isEvent: type === 'ev' });
-                                                alert("추가 완료");
-                                            }} className="w-full py-4 bg-rose-500 text-white rounded-[1.5rem] font-black">일정 추가</button>
-                                            <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 mt-4 bg-slate-50 p-2 rounded-2xl">
-                                                {Object.entries(academicEvents).sort().map(([k,v]) => (
-                                                    <div key={k} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl text-[11px] font-bold">
-                                                        <span className={v.isHoliday ? 'text-rose-600' : 'text-indigo-600'}>{k}: {v.title} ({v.isHoliday ? '휴업' : '행사'})</span>
-                                                        <button onClick={() => deleteData('academic', k)} className="text-rose-400 p-1"><SafeIcon name="X" size={14}/></button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         )}
 
@@ -910,19 +823,27 @@
                                 const p = parseInt(parts[3]);
                                 const cls = parts.slice(4).join('-'); 
                                 const cellData = getCellData(dateStr, p, cls);
-                                const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
-                                const mD = moveDate || dateStr; const mP = movePeriod || p;
                                 
-                                const checkConflicts = (targetType) => {
+                                // 이동 혹은 현재 편집 중인 아이템 결정
+                                const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
+                                
+                                // 중복 체크 로직 개선
+                                const checkConflicts = (targetType, targetDate, targetPeriod) => {
                                     if (!targetType) return null;
-                                    const targetCellInfo = getCellData(mD, mP, cls);
-                                    if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) return { msg: '학교 일정/방학에는 배정 불가' };
+                                    const targetCellInfo = getCellData(targetDate, targetPeriod, cls);
                                     
-                                    // 외부강사가 아닌 경우에만 교사 중복 체크 (외부강사는 중복 허용)
+                                    // 1. 학사일정 및 방학 체크
+                                    if (targetCellInfo.isHoliday || targetCellInfo.isEvent || targetCellInfo.isVacation) {
+                                        return { msg: '학교 일정/방학에는 배정 불가' };
+                                    }
+                                    
+                                    // 2. 교사 중복 체크 (외부강사 제외)
                                     if (targetType !== 'external') {
                                         for (const otherCls of currentGradeClasses) {
-                                            if (otherCls === cls && mD === dateStr && mP === p) continue; 
-                                            const otherData = getCellData(mD, mP, otherCls);
+                                            // 같은 반의 현재 교시는 스킵
+                                            if (otherCls === cls && targetDate === dateStr && targetPeriod === p) continue;
+                                            
+                                            const otherData = getCellData(targetDate, targetPeriod, otherCls);
                                             const otherItem = otherData.override || otherData.base;
                                             if (otherItem && otherItem.type === targetType) {
                                                 return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 시간에 ${otherCls} 수업 중입니다.` };
@@ -930,13 +851,22 @@
                                         }
                                     }
                                     
-                                    if ((targetCellInfo.override || targetCellInfo.base) && (mD !== dateStr || mP !== p)) {
-                                        return { msg: `${cls}반에 이미 수업이 배정되어 있습니다.` };
+                                    // 3. 학급 내 이미 수동 등록된 수업이 있는지 체크 (마스터 시간표는 허용)
+                                    // 현재 편집중인 아이템이 아니고, 목표 지점에 이미 override가 있는 경우만 차단
+                                    if (targetCellInfo.override && (targetDate !== dateStr || targetPeriod !== p)) {
+                                        return { msg: `${cls}반에 이미 수동 등록된 수업이 배정되어 있습니다.` };
                                     }
+                                    
                                     return null;
                                 };
 
-                                const conflict = currentItem ? checkConflicts(currentItem.type) : null;
+                                const mD = moveDate || dateStr; 
+                                const mP = movePeriod || p;
+                                
+                                // 현재 선택된 모드에 따른 타입 결정
+                                const activeType = currentItem ? currentItem.type : (newRegMode === 'master' ? newRegType : 'external');
+                                const conflict = checkConflicts(activeType, mD, mP);
+                                
                                 const currentSubjectName = currentItem ? (currentItem.title || SPECIALISTS.find(s=>s.id===currentItem.type)?.name) : "없음";
 
                                 return (
@@ -954,10 +884,10 @@
 
                                         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                                             <div className="space-y-4">
-                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Selective Move</h3>
+                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Selective Action</h3>
                                                 <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
                                                     {currentItem ? (
-                                                        <div className="space-y-4">
+                                                        <div className="space-y-4 animate-in">
                                                             <div className="grid grid-cols-1 gap-4">
                                                                 <div className="space-y-2">
                                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">이동 목표 날짜</label>
@@ -992,7 +922,7 @@
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
                                                                     } catch(e) { alert("오류: " + e.message); }
                                                                     setIsSaving(false);
-                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl ${conflict ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>달력에 반영</button>
+                                                                }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>달력에 반영</button>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-6">
@@ -1002,35 +932,38 @@
                                                             </div>
                                                             {newRegMode === 'master' ? (
                                                                 <div className="space-y-4 animate-in">
-                                                                    <select id="new-master-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
+                                                                    <select value={newRegType} onChange={e => setNewRegType(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
                                                                         {SPECIALISTS.filter(s=>s.id!=='external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
-                                                                    <button onClick={async () => {
-                                                                        const type = document.getElementById('new-master-type').value;
-                                                                        const conflictCheck = checkConflicts(type);
-                                                                        if (conflictCheck) return alert(conflictCheck.msg);
+                                                                    {conflict && (
+                                                                        <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600 animate-in">
+                                                                            <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-none">{conflict.msg}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <button disabled={!!conflict} onClick={async () => {
+                                                                        if(conflict) return;
                                                                         const existing = overrides[selectedCell] || {};
-                                                                        await saveData('overrides', selectedCell, { ...existing, type, status: 'held', classLabel: cls });
+                                                                        await saveData('overrides', selectedCell, { ...existing, type: newRegType, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className="w-full py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">달력에 반영</button>
+                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>달력에 반영</button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="space-y-4 animate-in">
-                                                                    <input type="text" placeholder="수업명" id="new-custom-title" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none" />
-                                                                    <select id="new-custom-type" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
-                                                                        {/* 일반 등록 목록에서 영어/과학/체육 제외하고 외부강사만 표시 */}
+                                                                    <input type="text" value={newRegTitle} onChange={e => setNewRegTitle(e.target.value)} placeholder="수업명" className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none" />
+                                                                    <select className="w-full p-4 rounded-2xl bg-slate-50 border-none font-black text-[13px] outline-none">
                                                                         {SPECIALISTS.filter(s => s.id === 'external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                                     </select>
-                                                                    <button onClick={async () => {
-                                                                        const title = document.getElementById('new-custom-title').value;
-                                                                        const type = document.getElementById('new-custom-type').value;
-                                                                        if(!title) return alert("수업명 입력");
-                                                                        const conflictCheck = checkConflicts(type);
-                                                                        if (conflictCheck) return alert(conflictCheck.msg);
+                                                                    {conflict && (
+                                                                        <div className="flex items-center gap-2 p-4 rounded-2xl border bg-rose-50 border-rose-100 text-rose-600 animate-in">
+                                                                            <SafeIcon name="AlertCircle" size={16}/><span className="text-[11px] font-black leading-none">{conflict.msg}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <button disabled={!!conflict || !newRegTitle} onClick={async () => {
+                                                                        if(conflict || !newRegTitle) return;
                                                                         const existing = overrides[selectedCell] || {};
-                                                                        await saveData('overrides', selectedCell, { ...existing, title, type, status: 'held', classLabel: cls });
+                                                                        await saveData('overrides', selectedCell, { ...existing, title: newRegTitle, type: 'external', status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className="w-full py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">달력에 반영</button>
+                                                                    }} className={`w-full py-5 rounded-[1.8rem] font-black text-[14px] shadow-xl transition-all ${conflict || !newRegTitle ? 'bg-slate-100 text-slate-300' : 'bg-slate-900 text-white hover:bg-black active:scale-95'}`}>달력에 반영</button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1054,7 +987,7 @@
                                                     }
                                                 }} className="w-full py-4 bg-white text-rose-500 font-black rounded-2xl border border-rose-100 text-[12px] uppercase tracking-widest">삭제</button>
                                             )}
-                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); }} className="w-full py-4 bg-slate-200 text-slate-500 font-black rounded-2xl text-[12px] uppercase tracking-widest">닫기</button>
+                                            <button onClick={() => { setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null); setNewRegTitle(''); }} className="w-full py-4 bg-slate-200 text-slate-500 font-black rounded-2xl text-[12px] uppercase tracking-widest">닫기</button>
                                         </div>
                                     </>
                                 );
