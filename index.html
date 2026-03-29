@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V8.9 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V8.10 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -84,7 +84,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.9 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.10 로딩 중...</p>
         </div>
     </div>
 
@@ -136,7 +136,12 @@
             const [isLoading, setIsLoading] = useState(true);
             const [baseSchedule, setBaseSchedule] = useState({});
             const [overrides, setOverrides] = useState({});
-            const [targetHours, setTargetHours] = useState({ english: 30, science: 30, pe: 30, external: 10 });
+            
+            // 학기별 목표 시수 구조 변경
+            const [targetHours, setTargetHours] = useState({ 
+                s1: { english: 15, science: 15, pe: 15 }, 
+                s2: { english: 15, science: 15, pe: 15 } 
+            });
             const [semesterConfig, setSemesterConfig] = useState({ s1Start: '2026-03-02', s1End: '2026-07-20', s2Start: '2026-08-20', s2End: '2026-12-30' });
             const [academicEvents, setAcademicEvents] = useState({});
 
@@ -319,7 +324,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.9 Pro</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.10 Pro</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -597,7 +602,6 @@
 
                         {activeTab === 'config' && (
                             <div className="space-y-10 animate-in">
-                                {/* V8.9 복구된 마스터 시간표 일괄 설정 */}
                                 <div className="bg-indigo-600 p-8 rounded-[3rem] shadow-xl text-white relative overflow-hidden">
                                     <h3 className="text-xl font-black mb-8 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Settings" size={24}/> 전담 시간표 마스터 일괄 설정</h3>
                                     <div className="space-y-8 relative z-10 mt-8">
@@ -645,7 +649,6 @@
                                     </div>
                                 </div>
 
-                                {/* 마스터 시간표 개별 관리 그리드 복구 */}
                                 <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-8 border-b bg-slate-50 flex justify-between items-center">
                                         <h4 className="text-lg font-black text-slate-800 italic flex items-center gap-2"><SafeIcon name="Table" className="text-indigo-500"/> 전담 마스터 시간표 전체 관리</h4>
@@ -691,34 +694,51 @@
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
                                     <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 h-fit">
-                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 및 목표 시수 설정</h4>
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-2 gap-4">
+                                        <h4 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><SafeIcon name="CalendarRange" className="text-indigo-500"/> 학기 기간 및 목표 시수 설정</h4>
+                                        <div className="space-y-8">
+                                            <div className="grid grid-cols-2 gap-4 border-b pb-6">
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1학기 시작</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 시작</label>
                                                     <input type="date" value={semesterConfig.s1Start} onChange={e => setSemesterConfig({...semesterConfig, s1Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1학기 종료</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">1학기 종료</label>
                                                     <input type="date" value={semesterConfig.s1End} onChange={e => setSemesterConfig({...semesterConfig, s1End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">2학기 시작</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 시작</label>
                                                     <input type="date" value={semesterConfig.s2Start} onChange={e => setSemesterConfig({...semesterConfig, s2Start: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">2학기 종료</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">2학기 종료</label>
                                                     <input type="date" value={semesterConfig.s2End} onChange={e => setSemesterConfig({...semesterConfig, s2End: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
                                                 </div>
                                             </div>
-                                            {/* 외부강사 제외된 목표 시수 */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                {SPECIALISTS.filter(s => s.id !== 'external').map(s => (
-                                                    <div key={s.id} className="space-y-1">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.name} 목표</label>
-                                                        <input type="number" value={targetHours[s.id] || 0} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value)})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                            
+                                            {/* 학기별 독립 목표 시수 입력란 */}
+                                            <div className="space-y-6">
+                                                <div className="space-y-4">
+                                                    <h5 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest italic">1학기 목표 시수 (반별)</h5>
+                                                    <div className="grid grid-cols-3 gap-4">
+                                                        {SPECIALISTS.filter(s => s.id !== 'external').map(s => (
+                                                            <div key={s.id} className="space-y-1">
+                                                                <label className="text-[10px] font-black text-slate-400 uppercase">{s.name}</label>
+                                                                <input type="number" value={targetHours.s1?.[s.id] || 0} onChange={e => setTargetHours({...targetHours, s1: {...targetHours.s1, [s.id]: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
+                                                </div>
+                                                <div className="space-y-4">
+                                                    <h5 className="text-[11px] font-black text-rose-600 uppercase tracking-widest italic">2학기 목표 시수 (반별)</h5>
+                                                    <div className="grid grid-cols-3 gap-4">
+                                                        {SPECIALISTS.filter(s => s.id !== 'external').map(s => (
+                                                            <div key={s.id} className="space-y-1">
+                                                                <label className="text-[10px] font-black text-slate-400 uppercase">{s.name}</label>
+                                                                <input type="number" value={targetHours.s2?.[s.id] || 0} onChange={e => setTargetHours({...targetHours, s2: {...targetHours.s2, [s.id]: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl bg-slate-50 border-none font-black text-sm" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                             <button onClick={async () => {
                                                 await saveData('academic', 'semesters', semesterConfig);
@@ -777,10 +797,10 @@
                                                         <div className="absolute top-4 right-6 text-[10px] font-black text-indigo-300 uppercase italic tracking-widest leading-none">{sem.toUpperCase()} Semester</div>
                                                         <h4 className={`text-lg font-black italic leading-none ${sem === 's1' ? 'text-indigo-600' : 'text-rose-600'}`}>{sem === 's1' ? '1학기 이수 현황' : '2학기 이수 현황'}</h4>
                                                         <div className="space-y-6">
-                                                            {SPECIALISTS.map(spec => {
+                                                            {SPECIALISTS.filter(s => s.id !== 'external').map(spec => {
                                                                 const count = stats[cls][sem][spec.id] || 0;
-                                                                const target = Math.round(targetHours[spec.id] / 2); 
-                                                                const percent = Math.min((count / (target||1)) * 100, 100).toFixed(0);
+                                                                const target = targetHours[sem]?.[spec.id] || 0;
+                                                                const percent = target > 0 ? Math.min((count / target) * 100, 100).toFixed(0) : 0;
                                                                 return (
                                                                     <div key={spec.id} className="space-y-2">
                                                                         <div className="flex justify-between items-end px-1 leading-none">
@@ -793,7 +813,17 @@
                                                                     </div>
                                                                 );
                                                             })}
+                                                            
+                                                            {/* 외부강사: 목표 없이 카운팅만 */}
+                                                            <div className="pt-4 border-t border-slate-200">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="font-black text-slate-400 text-xs uppercase tracking-tighter">외부강사 누적 시수</span>
+                                                                    <span className="font-black text-amber-600 text-lg">{stats[cls][sem].external} <small className="text-slate-300 text-[10px]">회</small></span>
+                                                                </div>
+                                                            </div>
                                                         </div>
+                                                        
+                                                        {/* 외부강사 상세 내역 및 검색창 복구 */}
                                                         {stats[cls][sem].history.length > 0 && (
                                                             <div className="mt-8 pt-6 border-t border-slate-200">
                                                                 <div className="flex justify-between items-center mb-4">
@@ -842,21 +872,37 @@
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 const mD = moveDate || dateStr; const mP = movePeriod || p;
                                 
-                                const checkConflicts = () => {
-                                    if (!currentItem) return null; 
-                                    const targetCell = getCellData(mD, mP, cls);
-                                    if (targetCell.isHoliday || targetCell.isEvent) return { msg: '학교 일정/공휴일에는 이동 불가' };
-                                    if ((targetCell.override || targetCell.base) && (mD !== dateStr || mP !== p)) return { msg: `${cls}반에 이미 수업이 있습니다.` };
+                                // 중복 수업 방지 로직 (수정 및 강화)
+                                const checkConflicts = (targetType) => {
+                                    if (!targetType) return null;
+                                    
+                                    // 1. 공휴일/학교행사 체크
+                                    const targetCellInfo = getCellData(mD, mP, cls);
+                                    if (targetCellInfo.isHoliday || targetCellInfo.isEvent) return { msg: '학교 일정/공휴일에는 이동 불가' };
+                                    
+                                    // 2. 같은 시간에 다른 반(cls)에서 같은 교사(type)가 수업 중인지 체크
                                     for (const otherCls of currentGradeClasses) {
+                                        // 현재 내가 수정하려는 반(cls)은 제외하고 다른 반들만 확인
                                         if (otherCls === cls && mD === dateStr && mP === p) continue; 
+                                        
                                         const otherData = getCellData(mD, mP, otherCls);
                                         const otherItem = otherData.override || otherData.base;
-                                        if (otherItem && otherItem.type === currentItem.type) return { msg: `해당 시간에 ${otherCls} 수업 중입니다.` };
+                                        
+                                        // 같은 교사(targetType)가 발견되면 중복
+                                        if (otherItem && otherItem.type === targetType) {
+                                            return { msg: `${SPECIALISTS.find(s=>s.id===targetType)?.name} 선생님은 해당 시간에 ${otherCls} 수업 중입니다.` };
+                                        }
                                     }
+                                    
+                                    // 3. 이동하려는 위치에 이미 수업이 있는지 (자기 자신 위치 이동은 허용)
+                                    if ((targetCellInfo.override || targetCellInfo.base) && (mD !== dateStr || mP !== p)) {
+                                        return { msg: `${cls}반에 이미 수업이 배정되어 있습니다.` };
+                                    }
+
                                     return null;
                                 };
 
-                                const conflict = checkConflicts();
+                                const conflict = currentItem ? checkConflicts(currentItem.type) : null;
                                 const currentSubjectName = currentItem ? (currentItem.title || SPECIALISTS.find(s=>s.id===currentItem.type)?.name) : "없음";
 
                                 return (
@@ -927,6 +973,9 @@
                                                                     </select>
                                                                     <button onClick={async () => {
                                                                         const type = document.getElementById('new-master-type').value;
+                                                                        const conflictCheck = checkConflicts(type);
+                                                                        if (conflictCheck) return alert(conflictCheck.msg);
+                                                                        
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
@@ -942,6 +991,10 @@
                                                                         const title = document.getElementById('new-custom-title').value;
                                                                         const type = document.getElementById('new-custom-type').value;
                                                                         if(!title) return alert("수업명 입력");
+                                                                        
+                                                                        const conflictCheck = checkConflicts(type);
+                                                                        if (conflictCheck) return alert(conflictCheck.msg);
+                                                                        
                                                                         const existing = overrides[selectedCell] || {};
                                                                         await saveData('overrides', selectedCell, { ...existing, title, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
@@ -979,7 +1032,7 @@
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-[110] border border-white/10 opacity-90 scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.9 Precision Engine Ready</span>
+                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.10 Precision Engine Ready</span>
                     </div>
                 </div>
             );
