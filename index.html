@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V8.0 - 지능형 시수 관리 시스템</title>
+    <title>전담 마크 Pro V8.1 - 지능형 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -67,13 +67,16 @@
 
         .sidebar-shadow { box-shadow: -15px 0 35px rgba(0,0,0,0.08); }
         .transition-main { transition: padding-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.0 로딩 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V8.1 로딩 중...</p>
         </div>
     </div>
 
@@ -245,6 +248,12 @@
                         }
                     }
                 });
+
+                Object.keys(res).forEach(c => {
+                    res[c].s1.history.sort((a,b) => new Date(a.date) - new Date(b.date)); 
+                    res[c].s2.history.sort((a,b) => new Date(a.date) - new Date(b.date));
+                });
+
                 return res;
             }, [overrides, currentGradeClasses, semesterConfig]);
 
@@ -261,7 +270,7 @@
                     <header className="bg-white border-b px-4 py-2 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-2 rounded-xl text-white shadow-md"><SafeIcon name="ClipboardCheck" size={18} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.0 Pro</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V8.1 Pro</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                             {[
@@ -413,7 +422,7 @@
                             </div>
                         )}
 
-                        {/* 강사 수업 일괄 등록 (기능 유지) */}
+                        {/* 2. 강사 수업 등록 (일괄) */}
                         {activeTab === 'instructor' && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in">
                                 <div className="lg:col-span-2 bg-amber-600 p-8 rounded-[3rem] shadow-xl text-white relative overflow-hidden h-fit">
@@ -465,14 +474,14 @@
                                                 alert("반영 완료!"); setActiveTab('academic');
                                             } catch (e) { alert("오류: " + e.message); }
                                             setIsSaving(false);
-                                        }} className="w-full py-5 bg-white text-amber-600 font-black rounded-[2rem] shadow-xl hover:bg-amber-50 active:scale-95 transition-all">일괄 등록 실행</button>
+                                        }} className="w-full py-5 bg-white text-amber-600 font-black rounded-[2rem] shadow-xl hover:bg-amber-50 active:scale-95 transition-all">달력에 반영</button>
                                     </div>
                                 </div>
                                 <div className="bg-white p-6 rounded-[3rem] shadow-sm border border-slate-200">
                                     <h4 className="text-sm font-black text-slate-800 mb-5 flex items-center gap-2 italic uppercase"><SafeIcon name="List" className="text-amber-500" /> 최근 등록 내역</h4>
                                     <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
                                         {Object.entries(overrides).filter(([k,v]) => v.type === 'external').slice(0,10).map(([key, v]) => (
-                                            <div key={key} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group">
+                                            <div key={key} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group shadow-sm border border-transparent hover:border-amber-100 transition-all">
                                                 <div className="flex-1">
                                                     <div className="text-[12px] font-black text-slate-800 truncate">{v.title}</div>
                                                     <div className="text-[10px] text-slate-400 font-bold mt-1">{key.replace(/-/g, '.')} ({v.classLabel})</div>
@@ -485,83 +494,154 @@
                             </div>
                         )}
 
-                        {/* 전담 시간 마스터 설정 (기능 유지) */}
+                        {/* 3. 전담 시간 등록 (복구 버전) */}
                         {activeTab === 'config' && (
                             <div className="space-y-10 animate-in">
-                                <div className="bg-indigo-600 p-8 rounded-[3rem] shadow-xl text-white">
-                                    <h3 className="text-xl font-black mb-8 flex items-center gap-2 italic uppercase"><SafeIcon name="Settings" size={24}/> 전담 시간표 마스터 관리</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                                        <div className="space-y-2">
-                                            <label className="text-[11px] font-black opacity-60 uppercase tracking-widest">학급</label>
-                                            <input type="text" value={fixedClass} onChange={e => setFixedClass(e.target.value)} placeholder="예: 5-1" className="w-full p-4 rounded-[1.5rem] bg-white/10 border-none text-white focus:bg-white focus:text-slate-800 font-black text-[13px] outline-none" />
+                                <div className="bg-indigo-600 p-8 rounded-[3rem] shadow-xl text-white relative overflow-hidden">
+                                    <div className="absolute -top-10 -right-10 opacity-10 rotate-12"><SafeIcon name="Settings" size={180}/></div>
+                                    <h3 className="text-xl font-black mb-1 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Settings" size={24}/> 전담 시간표 마스터 일괄 설정</h3>
+                                    
+                                    <div className="space-y-8 relative z-10 mt-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest leading-none">대상 학급 명칭</label>
+                                                <input type="text" value={fixedClass} onChange={e => setFixedClass(e.target.value)} placeholder="예: 5-1" className="w-full p-4 rounded-[1.5rem] bg-white/10 border-none text-white placeholder-white/30 font-black text-[13px] outline-none focus:bg-white focus:text-slate-800 transition-all shadow-inner" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-black opacity-60 ml-1 uppercase tracking-widest leading-none">과목 선택</label>
+                                                <select value={fixedSpec} onChange={e => setFixedSpec(e.target.value)} className="w-full p-4 rounded-[1.5rem] bg-white/20 border-none text-white font-black text-[13px] outline-none cursor-pointer">
+                                                    {SPECIALISTS.filter(s => s.id !== 'external').map(s => <option key={s.id} value={s.id} className="text-slate-800">{s.name}</option>)}
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[11px] font-black opacity-60 uppercase tracking-widest">과목</label>
-                                            <select value={fixedSpec} onChange={e => setFixedSpec(e.target.value)} className="w-full p-4 rounded-[1.5rem] bg-white/20 border-none text-white font-black text-[13px] outline-none">
-                                                {SPECIALISTS.filter(s=>s.id!=='external').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white/10 p-6 rounded-[2rem] overflow-x-auto">
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr><th className="p-2"></th>{DAYS.map(d => <th key={d} className="p-2 text-[10px] font-black text-white/50">{d}</th>)}</tr>
-                                            </thead>
-                                            <tbody>
-                                                {PERIODS.map(p => (
-                                                    <tr key={p}><td className="p-2 text-[10px] font-black text-white/50">{p}교시</td>
-                                                        {DAYS.map((_, dIdx) => {
-                                                            const slotId = `${dIdx}-${p}`;
-                                                            const isSelected = fixedSlots.includes(slotId);
-                                                            return <td key={dIdx} className="p-1">
-                                                                <button onClick={() => isSelected ? setFixedSlots(fixedSlots.filter(s=>s!==slotId)) : setFixedSlots([...fixedSlots, slotId])} className={`w-full py-3 rounded-xl border-2 transition-all font-black text-[10px] ${isSelected ? 'bg-white text-indigo-600 border-white shadow-lg' : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'}`}>{isSelected ? fixedClass : '비었음'}</button>
-                                                            </td>;
-                                                        })}
+
+                                        <div className="bg-white/10 p-6 rounded-[2rem] border border-white/20 overflow-x-auto">
+                                            <label className="text-[11px] font-black opacity-60 mb-4 block uppercase tracking-widest leading-none text-center italic">시간표 그리드 (클릭하여 선택)</label>
+                                            <table className="w-full">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="p-2"></th>
+                                                        {DAYS.map(d => <th key={d} className="p-2 text-[10px] font-black text-white/50">{d}</th>)}
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {PERIODS.map(p => (
+                                                        <tr key={p}>
+                                                            <td className="p-2 text-[10px] font-black text-white/50">{p}교시</td>
+                                                            {DAYS.map((_, dIdx) => {
+                                                                const slotId = `${dIdx}-${p}`;
+                                                                const isSelected = fixedSlots.includes(slotId);
+                                                                return (
+                                                                    <td key={dIdx} className="p-1">
+                                                                        <button 
+                                                                            onClick={() => isSelected ? setFixedSlots(fixedSlots.filter(s => s !== slotId)) : setFixedSlots([...fixedSlots, slotId])}
+                                                                            className={`w-full py-3 rounded-xl border-2 transition-all font-black text-[10px] truncate px-1 ${isSelected ? 'bg-white text-indigo-600 border-white shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'}`}
+                                                                        >
+                                                                            {isSelected ? fixedClass : '비었음'}
+                                                                        </button>
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <button onClick={async () => {
+                                            if(!fixedClass || fixedSlots.length === 0) return alert("학급과 시간을 선택하세요.");
+                                            setIsSaving(true);
+                                            try {
+                                                for(const slot of fixedSlots) {
+                                                    const [dIdx, p] = slot.split('-').map(Number);
+                                                    await saveData('base', `${dIdx}-${p}-${fixedSpec}-${fixedClass}`, { dayIdx: dIdx, period: p, type: fixedSpec, classLabel: fixedClass });
+                                                }
+                                                alert("성공적으로 마스터 데이터에 저장되었습니다."); setFixedSlots([]);
+                                            } catch (e) { alert("저장 중 오류: " + e.message); }
+                                            setIsSaving(false);
+                                        }} className="w-full py-5 bg-white text-indigo-600 font-black rounded-[2rem] shadow-xl transition-all active:scale-[0.98] text-[16px] tracking-widest hover:bg-indigo-50 btn-press">전담 마스터 저장</button>
                                     </div>
-                                    <button onClick={async () => {
-                                        if(!fixedClass || fixedSlots.length === 0) return alert("학급과 시간을 선택하세요.");
-                                        setIsSaving(true);
-                                        try {
-                                            for(const slot of fixedSlots) {
-                                                const [dIdx, p] = slot.split('-').map(Number);
-                                                await saveData('base', `${dIdx}-${p}-${fixedSpec}-${fixedClass}`, { dayIdx: dIdx, period: p, type: fixedSpec, classLabel: fixedClass });
-                                            }
-                                            alert("마스터 저장 완료!"); setFixedSlots([]);
-                                        } catch (e) { alert("오류: " + e.message); }
-                                        setIsSaving(false);
-                                    }} className="w-full py-5 bg-white text-indigo-600 font-black rounded-[2rem] shadow-xl mt-8 hover:bg-indigo-50 transition-all">전담 마스터 데이터 일관 적용</button>
+                                </div>
+
+                                {/* 마스터 DB 관리 복구 */}
+                                <div className="bg-white rounded-[3rem] border border-slate-200 overflow-hidden shadow-sm">
+                                    <div className="p-8 border-b bg-slate-50 flex items-center justify-between">
+                                        <h4 className="text-lg font-black text-slate-800 italic uppercase tracking-tighter flex items-center gap-2"><SafeIcon name="Table" className="text-indigo-500"/> 전담 시간표 마스터 관리 (삭제 전용)</h4>
+                                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Matrix Database</div>
+                                    </div>
+                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                        {Object.entries(baseSchedule).sort((a,b)=>a[1].dayIdx - b[1].dayIdx || a[1].period - b[1].period).map(([key, v]) => (
+                                            <div key={key} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group border border-transparent hover:border-indigo-100 transition-all">
+                                                <div>
+                                                    <div className="text-[11px] font-black text-slate-800">{DAYS[v.dayIdx]}요일 {v.period}교시</div>
+                                                    <div className="text-[10px] font-bold text-indigo-600 uppercase mt-0.5 italic">{SPECIALISTS.find(s=>s.id===v.type)?.name} - {v.classLabel}</div>
+                                                </div>
+                                                <button onClick={async () => { if(confirm("이 데이터를 삭제할까요?")) await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'base', key)); }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2 rounded-lg hover:bg-rose-50"><SafeIcon name="Trash2" size={14}/></button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* 시수 통계 (기능 유지) */}
+                        {/* 4. 시수 통계 (복구 버전) */}
                         {activeTab === 'stats' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in">
-                                {currentGradeClasses.map(cls => (
-                                    <div key={cls} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                                        <h3 className="text-xl font-black text-slate-800 mb-8 italic uppercase tracking-tighter">5학년 {cls} 학기별 시수 통계</h3>
-                                        <div className="grid grid-cols-1 gap-10">
+                            <div className="space-y-12 animate-in">
+                                {Object.keys(stats).length === 0 && <div className="p-20 bg-white rounded-[3rem] text-center text-slate-300 font-black italic shadow-inner border border-slate-100 uppercase tracking-widest">No Statistical Data Found</div>}
+                                {Object.keys(stats).map(cls => (
+                                    <div key={cls} className="bg-white p-10 rounded-[4rem] border border-slate-200 shadow-sm space-y-12">
+                                        <h3 className="text-3xl font-black flex justify-between items-center text-slate-800 tracking-tighter uppercase italic">5학년 {cls} 시수 분석 <SafeIcon name="BarChart3" size={32} className="text-indigo-200"/></h3>
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
                                             {['s1', 's2'].map(sem => (
-                                                <div key={sem} className="space-y-6">
-                                                    <div className="text-[10px] font-black text-indigo-400 uppercase italic border-b pb-2">{sem === 's1' ? 'First Semester' : 'Second Semester'}</div>
-                                                    {SPECIALISTS.filter(s=>s.id!=='external').map(spec => {
-                                                        const count = stats[cls]?.[sem]?.[spec.id] || 0;
-                                                        const target = Math.round(targetHours[spec.id] / 2);
-                                                        const percent = Math.min((count / (target||1)) * 100, 100).toFixed(0);
-                                                        return <div key={spec.id} className="space-y-2">
-                                                            <div className="flex justify-between items-end">
-                                                                <span className="text-[11px] font-bold text-slate-500">{spec.name}</span>
-                                                                <span className="text-[14px] font-black">{count} <small className="text-[10px] text-slate-300">/ {target}</small></span>
+                                                <div key={sem} className="space-y-8 p-8 bg-slate-50/50 rounded-[3rem] border border-slate-100 relative overflow-hidden">
+                                                    <div className="absolute top-4 right-6 text-[10px] font-black text-indigo-300 uppercase italic tracking-widest">{sem.toUpperCase()} Semester</div>
+                                                    <h4 className={`text-lg font-black italic ${sem === 's1' ? 'text-indigo-600' : 'text-rose-600'}`}>{sem === 's1' ? '1학기 이수 현황' : '2학기 이수 현황'}</h4>
+                                                    <div className="space-y-6">
+                                                        {SPECIALISTS.filter(s=>s.id!=='external').map(spec => {
+                                                            const count = stats[cls][sem][spec.id] || 0;
+                                                            const target = Math.round(targetHours[spec.id] / 2); 
+                                                            const percent = Math.min((count / (target||1)) * 100, 100).toFixed(0);
+                                                            return (
+                                                                <div key={spec.id} className="space-y-2">
+                                                                    <div className="flex justify-between items-end px-1">
+                                                                        <span className="font-bold text-slate-500 text-xs">{spec.name}</span>
+                                                                        <span className="font-black text-slate-900 text-lg leading-none">{count} <span className="text-slate-300 font-bold text-[10px]">/ {target}</span></span>
+                                                                    </div>
+                                                                    <div className="h-3 bg-white rounded-full overflow-hidden border border-slate-100 shadow-inner">
+                                                                        <div className={`h-full ${spec.color} transition-all duration-1000`} style={{ width: `${percent}%` }}></div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    
+                                                    {/* 외부 강사 이력 테이블 복구 */}
+                                                    <div className="mt-8 space-y-4">
+                                                        <div className="flex justify-between items-center px-1">
+                                                            <h5 className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-1"><SafeIcon name="List" size={14}/> {sem === 's1' ? '1' : '2'}학기 외부강사 상세 내역</h5>
+                                                            <div className="relative">
+                                                                <input type="text" placeholder="Search..." onChange={(e) => setSearchQuery(e.target.value)} className="text-[10px] font-bold p-1.5 pl-7 border rounded-lg bg-white search-input w-[120px] transition-all focus:w-[150px] shadow-sm" />
+                                                                <SafeIcon name="Search" size={12} className="absolute left-2.5 top-2 text-slate-400" />
                                                             </div>
-                                                            <div className="h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                                                <div className={`h-full ${spec.color} transition-all duration-1000`} style={{ width: `${percent}%` }}></div>
-                                                            </div>
-                                                        </div>;
-                                                    })}
+                                                        </div>
+                                                        <div className="max-h-[250px] overflow-y-auto custom-scrollbar rounded-xl border border-slate-200 shadow-inner bg-white">
+                                                            <table className="excel-table">
+                                                                <thead>
+                                                                    <tr><th>날짜</th><th>교시</th><th>수업명</th></tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {(() => {
+                                                                        const history = stats[cls][sem].history.filter(h => h.title.includes(searchQuery) || h.date.includes(searchQuery));
+                                                                        return history.length > 0 ? history.map((h, i) => (
+                                                                            <tr key={i}><td>{h.date}</td><td>{h.period}교시</td><td className="font-black text-indigo-600">{h.title}</td></tr>
+                                                                        )) : (
+                                                                            <tr><td colSpan="3" className="py-10 text-slate-300 italic font-bold">No Records Found</td></tr>
+                                                                        );
+                                                                    })()}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -571,7 +651,7 @@
                         )}
                     </main>
 
-                    {/* V8.0 지능형 Lesson 사이드바 (Simulation Engine 강화) */}
+                    {/* V8.1 지능형 Lesson 사이드바 (Simulation Engine) */}
                     {isSidebarOpen && (
                         <div className="fixed top-0 right-0 z-[100] w-full max-w-md h-screen bg-white shadow-2xl sidebar-in sidebar-shadow flex flex-col border-l">
                             {(() => {
@@ -581,7 +661,6 @@
                                 const cls = parts.slice(4).join('-'); 
                                 const cellData = getCellData(dateStr, p, cls);
                                 
-                                // Conflict 상황 시 클릭한 개별 아이템 인지 강화
                                 const currentItem = activeMoveItem === 'base' ? cellData.base : (cellData.override || cellData.base);
                                 
                                 const mD = moveDate || dateStr;
@@ -589,16 +668,14 @@
                                 
                                 // 중복 체크 전수 조사 (시뮬레이션 검증 엔진)
                                 const checkConflicts = () => {
-                                    if (!currentItem) return null; // 추가 모드면 컨플릭트 상관없음(나중에 저장할 때 체크)
-                                    if (mD === dateStr && mP === p) return null; // 제자리
+                                    if (!currentItem) return null; 
+                                    if (mD === dateStr && mP === p) return null; 
 
-                                    // 1. 타겟 학급(5-1 등)의 해당 슬롯에 수업이 있는지
                                     const targetCell = getCellData(mD, mP, cls);
                                     if (targetCell.override || targetCell.base) {
                                         return { msg: `${cls}반의 해당 시간에는 이미 다른 수업이 배정되어 있습니다.` };
                                     }
 
-                                    // 2. 해당 과목 교사가 해당 시간에 다른 반 수업을 하고 있는지 (전수 조사)
                                     for (const otherCls of currentGradeClasses) {
                                         const otherData = getCellData(mD, mP, otherCls);
                                         const otherItem = otherData.override || otherData.base;
@@ -617,10 +694,10 @@
                                         <div className="p-8 border-b bg-slate-50 flex justify-between items-start">
                                             <div className="space-y-2">
                                                 <h2 className="text-xl font-black text-slate-800 italic tracking-tighter uppercase leading-none">Lesson <span className="text-indigo-600">Simulate</span></h2>
-                                                <div className="text-[12px] font-black text-slate-700 bg-white px-3 py-1.5 rounded-full border shadow-sm w-fit uppercase tracking-tighter">
+                                                <div className="text-[12px] font-black text-slate-700 bg-white px-3 py-1.5 rounded-full border shadow-sm w-fit uppercase tracking-tighter shadow-inner">
                                                     {formatHeaderDate(dateStr)} / {p}교시
                                                 </div>
-                                                <div className="text-[12px] font-bold text-slate-400 ml-1">
+                                                <div className="text-[12px] font-bold text-slate-400 ml-1 italic">
                                                     {cls}반 - <span className="text-indigo-600 font-black">{currentSubjectName}</span>
                                                 </div>
                                             </div>
@@ -628,9 +705,8 @@
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                                            {/* 수업 선택 영역 (Conflict 시 중요) */}
                                             <div className="space-y-4">
-                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Select Target to Modify</h3>
+                                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Selection Status</h3>
                                                 {cellData.override || cellData.base ? (
                                                     <div className="grid grid-cols-1 gap-3">
                                                         {cellData.base && (
@@ -643,7 +719,7 @@
                                                         {cellData.override && (
                                                             <div onClick={() => setActiveMoveItem('override')} className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${activeMoveItem === 'override' || !activeMoveItem ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-slate-100 opacity-60'} ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.bg} flex flex-col relative`}>
                                                                 {(activeMoveItem === 'override' || !activeMoveItem) && <div className="absolute top-4 right-4 text-indigo-600 bg-white p-1 rounded-full shadow-md"><SafeIcon name="Check" size={12}/></div>}
-                                                                <span className="text-[9px] font-black opacity-50 uppercase mb-1 leading-none tracking-tighter">Registered Lesson (등록 수업)</span>
+                                                                <span className="text-[9px] font-black opacity-50 uppercase mb-1 leading-none tracking-tighter">Registered Entry (등록 수업)</span>
                                                                 <span className={`text-[15px] font-black ${SPECIALISTS.find(s=>s.id===cellData.override.type)?.text}`}>{cellData.override.title || SPECIALISTS.find(s=>s.id===cellData.override.type)?.name}</span>
                                                             </div>
                                                         )}
@@ -653,7 +729,6 @@
                                                 )}
                                             </div>
 
-                                            {/* 시뮬레이션 및 추가 영역 */}
                                             <div className="space-y-4">
                                                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic border-l-2 border-indigo-500 pl-2">Simulation Engine</h3>
                                                 <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
@@ -694,9 +769,7 @@
                                                                     if(!confirm(`[${formatHeaderDate(mD)} ${mP}교시]로 조정하시겠습니까?`)) return;
                                                                     setIsSaving(true);
                                                                     try {
-                                                                        // 1. 기존 자리 '없음' 처리 (Override none)
                                                                         await saveData('overrides', selectedCell, { type: 'none', classLabel: cls });
-                                                                        // 2. 새 자리에 데이터 생성 (Override held)
                                                                         const lessonData = { title: currentItem.title || "", type: currentItem.type, status: 'held', classLabel: cls };
                                                                         await saveData('overrides', `${mD}-${mP}-${cls}`, lessonData);
                                                                         setIsSidebarOpen(false); setMoveDate(""); setMovePeriod(null); setActiveMoveItem(null);
@@ -709,7 +782,6 @@
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-6">
-                                                            {/* 일별 추가 모드 */}
                                                             <div className="flex bg-slate-100 p-1 rounded-2xl">
                                                                 <button onClick={() => setNewRegMode('master')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${newRegMode === 'master' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>전담 마스터</button>
                                                                 <button onClick={() => setNewRegMode('custom')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${newRegMode === 'custom' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>일반 등록</button>
@@ -723,10 +795,9 @@
                                                                         const type = document.getElementById('new-master-type').value;
                                                                         const d = new Date(dateStr + 'T00:00:00');
                                                                         const dayIdx = (d.getDay() + 6) % 7;
-                                                                        // 시수 통계 즉각 반영을 위해 overrides로도 함께 저장
                                                                         await saveData('base', `${dayIdx}-${p}-${type}-${cls}`, { dayIdx, period: p, type, classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className="w-full py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">전담 마스터로 달력에 반영</button>
+                                                                    }} className="w-full py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">달력에 반영</button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="space-y-4 animate-in">
@@ -740,7 +811,7 @@
                                                                         if(!title) return alert("수업명을 입력하세요.");
                                                                         await saveData('overrides', selectedCell, { title, type, status: 'held', classLabel: cls });
                                                                         setIsSidebarOpen(false);
-                                                                    }} className="w-full py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">일반 수업으로 달력에 반영</button>
+                                                                    }} className="w-full py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[14px] shadow-xl">달력에 반영</button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -769,8 +840,8 @@
                     )}
 
                     <div className="fixed bottom-6 left-6 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl z-[110] border border-white/10 opacity-90 scale-90">
-                        <div className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(129,140,248,1)]"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Intelligence V8.0 Hub</span>
+                        <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
+                        <span className="text-[10px] font-black tracking-widest uppercase italic leading-none">Matrix V8.1 Intelligence Hub</span>
                     </div>
                 </div>
             );
