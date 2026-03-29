@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V6.1 - 통합 시수 & 학사 관리 시스템</title>
+    <title>전담 마크 Pro V6.2 - 통합 시수 & 학사 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -64,7 +64,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V6.1 엔진 최적화 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V6.2 최적화 중...</p>
         </div>
     </div>
 
@@ -159,24 +159,23 @@
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id), { ...data, updatedAt: Timestamp.now() });
             };
 
-            // 월요일 계산 로직 보강 (JS Date 객체의 일요일=0 처리를 월요일=1 기준으로 재계산)
+            // 월요일 계산 로직 수정 (팝업 달력 선택 시 주간 날짜 꼬임 해결)
             const getMonday = (d) => {
                 const date = new Date(d + 'T00:00:00');
-                const day = date.getDay();
-                // 일요일(0)이면 6일을 빼고, 나머지는 (day-1)일을 뺌
-                const diff = date.getDate() - (day === 0 ? 6 : day - 1);
-                const result = new Date(date.setDate(diff));
-                return result.toISOString().split('T')[0];
+                const day = date.getDay(); // 0(일) ~ 6(토)
+                const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(date.setDate(diff));
+                return monday.toISOString().split('T')[0];
             };
 
             const getCellData = (dateStr, period, classLabel) => {
                 const overrideKey = `${dateStr}-${period}-${classLabel}`;
                 const date = new Date(dateStr + 'T00:00:00'); 
-                const dayIdx = (date.getDay() + 6) % 7; 
+                const dayIdx = (date.getDay() + 6) % 7; // 0(월) ~ 4(금)
                 
                 const override = overrides[overrideKey];
                 
-                // baseSchedule(전담 고정 시간표) 검색
+                // 전담 고정 시간표(baseSchedule) 매칭
                 const baseMatch = Object.values(baseSchedule).find(v => 
                     v.dayIdx === dayIdx && v.period === period && v.classLabel === classLabel
                 );
@@ -237,7 +236,7 @@
                     <header className="bg-white border-b px-4 py-1.5 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-1.5 rounded-lg text-white shadow-md"><SafeIcon name="ClipboardCheck" size={16} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V6.1 Final</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V6.2 Final</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-0.5 rounded-xl">
                             {[
@@ -273,7 +272,7 @@
                                             }} className="p-2 border rounded-xl hover:bg-slate-50 transition-all btn-press"><SafeIcon name="ChevronRight" size={18} /></button>
                                         </div>
                                         <div className="h-6 w-px bg-slate-200 hidden md:block mx-2"></div>
-                                        <button onClick={() => { alert("최신 시간표를 동기화했습니다."); window.location.reload(); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[11px] hover:bg-indigo-100 transition-all btn-press shadow-sm">
+                                        <button onClick={() => { alert("클라우드 시간표를 최신 상태로 동기화했습니다."); window.location.reload(); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[11px] hover:bg-indigo-100 transition-all btn-press shadow-sm">
                                             <SafeIcon name="RefreshCw" size={14} /> 전담 시간표 반영
                                         </button>
                                     </div>
@@ -291,9 +290,9 @@
                                                 <tr className="bg-slate-50 border-b">
                                                     <th className="p-3 border-r w-16 text-[10px] font-black text-slate-300 uppercase tracking-widest">교시</th>
                                                     {(() => {
-                                                        const monday = getMonday(selectedDate);
+                                                        const mondayStr = getMonday(selectedDate);
                                                         return DAYS.map((d, i) => {
-                                                            const colDate = new Date(monday + 'T00:00:00');
+                                                            const colDate = new Date(mondayStr + 'T00:00:00');
                                                             colDate.setDate(colDate.getDate() + i);
                                                             const dateStr = colDate.toISOString().split('T')[0];
                                                             const isToday = dateStr === new Date().toISOString().split('T')[0];
@@ -310,9 +309,9 @@
                                                     <tr key={p} className="border-b last:border-0">
                                                         <td className="p-4 bg-slate-50/20 border-r text-center font-black text-slate-200 text-3xl italic tracking-tighter leading-none">{p}</td>
                                                         {(() => {
-                                                            const monday = getMonday(selectedDate);
+                                                            const mondayStr = getMonday(selectedDate);
                                                             return DAYS.map((_, i) => {
-                                                                const colDate = new Date(monday + 'T00:00:00');
+                                                                const colDate = new Date(mondayStr + 'T00:00:00');
                                                                 colDate.setDate(colDate.getDate() + i);
                                                                 const dateStr = colDate.toISOString().split('T')[0];
                                                                 return <td key={i} className="p-1.5 border-r last:border-0 align-top h-24">
@@ -464,7 +463,7 @@
                                                     const classesToSave = instClass === '학년공통' ? TARGET_CLASSES : [instClass];
                                                     for(const singleCls of classesToSave) {
                                                         for(let i = instStart; i <= instEnd; i++) {
-                                                            await saveData('overrides', `${d}-${i}-${singleCls}`, { title: instTitle, type: 'external', status: 'held', classLabel: singleCls });
+                                                            await saveData('overrides', `${d}-${i}-${singleCls}`, { title: instTitle, type: 'external', status: 'held', classLabel: singleCls, updatedAt: window.fb.Timestamp.now() });
                                                         }
                                                     }
                                                 }
@@ -666,14 +665,14 @@
                                         const parts = selectedCell.split('-');
                                         const [d, p, c] = [`${parts[0]}-${parts[1]}-${parts[2]}`, parseInt(parts[3]), parts[4]];
                                         const data = getCellData(d, p, c);
-                                        if(data) saveData('overrides', selectedCell, { ...data, status: 'held', classLabel: c }).then(() => setIsModalOpen(false));
+                                        if(data) saveData('overrides', selectedCell, { ...data, status: 'held', classLabel: c, updatedAt: window.fb.Timestamp.now() }).then(() => setIsModalOpen(false));
                                         else alert("등록된 수업 정보가 없습니다.");
                                     }} className="p-12 bg-indigo-50 text-indigo-600 rounded-[3rem] border-2 border-indigo-100 font-black flex flex-col items-center gap-4 transition-all hover:bg-indigo-100 active:scale-95 shadow-xl shadow-indigo-100/50 btn-press"><SafeIcon name="CheckCircle2" size={48}/>완료</button>
                                     <button onClick={() => {
                                         const parts = selectedCell.split('-');
                                         const [d, p, c] = [`${parts[0]}-${parts[1]}-${parts[2]}`, parseInt(parts[3]), parts[4]];
                                         const data = getCellData(d, p, c);
-                                        if(data) saveData('overrides', selectedCell, { ...data, status: 'cancelled', classLabel: c }).then(() => setIsModalOpen(false));
+                                        if(data) saveData('overrides', selectedCell, { ...data, status: 'cancelled', classLabel: c, updatedAt: window.fb.Timestamp.now() }).then(() => setIsModalOpen(false));
                                         else setIsModalOpen(false);
                                     }} className="p-12 bg-rose-50 text-rose-600 rounded-[3rem] border-2 border-rose-100 font-black flex flex-col items-center gap-4 transition-all hover:bg-rose-100 active:scale-95 shadow-xl shadow-rose-100/50 btn-press"><SafeIcon name="X" size={48}/>결손</button>
                                 </div>
@@ -687,7 +686,7 @@
 
                     <div className="fixed bottom-8 right-8 flex items-center gap-3 bg-slate-900 text-white px-6 py-3.5 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-90 hover:opacity-100 transition-opacity scale-90">
                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
-                        <span className="text-[11px] font-black tracking-widest uppercase leading-none italic">Cloud Sync Engine V6.1</span>
+                        <span className="text-[11px] font-black tracking-widest uppercase leading-none italic">Cloud Sync Engine V6.2</span>
                     </div>
                 </div>
             );
