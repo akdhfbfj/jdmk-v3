@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전담 마크 Pro V5.8 - 통합 시수 관리 시스템</title>
+    <title>전담 마크 Pro V5.9 - 통합 시수 관리 시스템</title>
     
     <!-- 1. 스타일 및 라이브러리 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -64,7 +64,7 @@
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V5.8 최적화 중...</p>
+            <p style="margin-top: 15px; font-weight: 700; color: #4f46e5; font-size: 0.8rem;">전담 마크 Pro V5.9 최적화 중...</p>
         </div>
     </div>
 
@@ -105,15 +105,15 @@
             const [targetHours, setTargetHours] = useState({ english: 30, science: 30, pe: 30 });
             
             // UI 상태
-            const [activeTab, setActiveTab] = useState('lessons'); 
+            const [activeTab, setActiveTab] = useState('academic'); // 'academic' = 학사 일정 확인
             const [viewMode, setViewMode] = useState('daily'); 
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [selectedCell, setSelectedCell] = useState(null);
             
-            // 전담 설정용 편집용 상태 (key: day-period-specId)
+            // 전담 설정용 편집용 상태
             const [editingSchedule, setEditingSchedule] = useState({});
-            const [selectedSpec, setSelectedSpec] = useState('english');
+            const [selectedSpec, setSelectedSpec] = useState('english'); // 'all' 이면 전체보기
             const [quickClass, setQuickClass] = useState('1반');
             const [isSaving, setIsSaving] = useState(false);
 
@@ -170,26 +170,26 @@
                 
                 const override = overrides[overrideKey];
                 
-                // 전담 시간표(base) 반영 - 전체 과목 중 해당 반과 일치하는 항목 검색
-                const baseMatches = Object.values(baseSchedule).filter(v => 
+                // 전담 시간표(base) 반영 - 전체 과목 중 해당 반과 일치하는 모든 항목 검색
+                const baseMatch = Object.values(baseSchedule).find(v => 
                     v.dayIdx === dayIdx && v.period === period && v.classLabel === classLabel
                 );
                 
-                // 강사 수업 우선, 없으면 전담 수업 (중첩 시 첫 번째 매칭 항목 표시)
                 if (override) {
-                    const isConflict = baseMatches.length > 0 && override.type === 'external';
+                    const isConflict = baseMatch && override.type === 'external';
                     return { ...override, isConflict };
                 }
                 
-                if (baseMatches.length > 0) return { type: baseMatches[0].type };
+                if (baseMatch) return { type: baseMatch.type };
                 return null;
             };
 
             const parseSmartDates = (input) => {
                 if (!input) return [];
                 const currentYear = new Date().getFullYear();
-                return input.split(/[,|\n]/).map(d => {
-                    let s = d.trim().replace(/\s/g, '').replace(/\//g, '.');
+                // 쉼표, 줄바꿈, 공백 등 다양한 구분자 대응
+                return input.split(/[,|\n\s]+/).map(d => {
+                    let s = d.trim().replace(/\//g, '.');
                     if (!s) return null;
                     const parts = s.split('.');
                     if (parts.length === 2) s = `${currentYear}.${s}`;
@@ -229,11 +229,11 @@
                     <header className="bg-white border-b px-4 py-1.5 flex flex-col lg:flex-row justify-between items-center gap-2 sticky top-0 z-50 shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="bg-slate-900 p-1.5 rounded-lg text-white shadow-md"><SafeIcon name="ClipboardCheck" size={16} /></div>
-                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V5.8 Stable</span></h1>
+                            <h1 className="text-sm font-black text-slate-800 tracking-tighter">전담 마크 <span className="text-indigo-600 italic">V5.9</span></h1>
                         </div>
                         <nav className="flex bg-slate-100 p-0.5 rounded-xl">
                             {[
-                                { id: 'lessons', label: '시수 관리', icon: 'Calendar' },
+                                { id: 'academic', label: '학사 일정 확인', icon: 'Calendar' },
                                 { id: 'instructor', label: '강사 수업 등록', icon: 'Layers' },
                                 { id: 'config', label: '전담 시간 등록', icon: 'Settings' },
                                 { id: 'stats', label: '통계', icon: 'BarChart3' },
@@ -246,8 +246,8 @@
                     </header>
 
                     <main className="p-2 lg:p-4 max-w-7xl mx-auto w-full flex-1">
-                        {/* 1. 시수 관리 탭 */}
-                        {activeTab === 'lessons' && (
+                        {/* 1. 학사 일정 확인 탭 */}
+                        {activeTab === 'academic' && (
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
                                     <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@
                                         <div className="divide-y divide-slate-100">
                                             {PERIODS.map(p => (
                                                 <div key={p} className="grid grid-cols-5 min-h-[85px]">
-                                                    <div className="flex items-center justify-center bg-slate-50/20 border-r border-slate-100 font-black text-slate-200 text-3xl italic tracking-tighter">{p}</div>
+                                                    <div className="flex items-center justify-center bg-slate-50/20 border-r border-slate-100 font-black text-slate-200 text-3xl italic tracking-tighter leading-none">{p}</div>
                                                     {TARGET_CLASSES.map(cls => {
                                                         const data = getCellData(selectedDate, p, cls);
                                                         const spec = SPECIALISTS.find(s => s.id === data?.type);
@@ -325,7 +325,7 @@
                                             <tbody>
                                                 {PERIODS.map(p => (
                                                     <tr key={p} className="border-b last:border-0">
-                                                        <td className="p-3 bg-slate-50/20 border-r text-center font-black text-slate-200 text-2xl italic tracking-tighter">{p}</td>
+                                                        <td className="p-3 bg-slate-50/20 border-r text-center font-black text-slate-200 text-2xl italic tracking-tighter leading-none">{p}</td>
                                                         {DAYS.map((_, i) => {
                                                             const curr = new Date(selectedDate + 'T00:00:00');
                                                             const first = curr.getDate() - ((curr.getDay() + 6) % 7);
@@ -404,7 +404,7 @@
                                 <div className="lg:col-span-2 bg-amber-600 p-6 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden h-fit">
                                     <div className="absolute -top-10 -right-10 opacity-10 rotate-12"><SafeIcon name="Layers" size={180}/></div>
                                     <h3 className="text-xl font-black mb-1 flex items-center gap-2 relative z-10 italic uppercase tracking-widest leading-none"><SafeIcon name="Layers" size={20}/> 강사 수업 등록</h3>
-                                    <p className="text-amber-100 text-[10px] mb-8 font-medium relative z-10 italic opacity-80 uppercase tracking-tighter">Batch upload recurring external lessons.</p>
+                                    <p className="text-amber-100 text-[10px] mb-8 font-medium relative z-10 italic opacity-80 uppercase tracking-tighter">Enter external lesson schedules for batches.</p>
                                     <div className="space-y-6 relative z-10">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                             <div className="space-y-1">
@@ -437,7 +437,7 @@
                                         </div>
                                         <button onClick={async () => {
                                             const dates = parseSmartDates(instDates);
-                                            if(!instTitle || dates.length === 0) return alert("수업명과 날짜를 확인하세요.");
+                                            if(!instTitle || dates.length === 0) return alert("수업명과 유효한 날짜를 확인하세요.");
                                             if(instStart > instEnd) return alert("교시 설정이 올바르지 않습니다.");
 
                                             setIsSaving(true);
@@ -450,11 +450,11 @@
                                                         }
                                                     }
                                                 }
-                                                alert("등록 완료!"); setInstTitle(""); setInstDates("");
+                                                alert("달력에 반영되었습니다!"); setInstTitle(""); setInstDates("");
                                             } catch (e) { alert("오류: " + e.message); }
                                             setIsSaving(false);
                                         }} disabled={isSaving} className="w-full py-5 bg-white text-amber-600 font-black rounded-3xl shadow-xl transition-all active:scale-[0.98] text-[15px] tracking-widest hover:bg-amber-50 btn-press">
-                                            {isSaving ? 'Synching...' : '등록 실행 및 시수 반영'}
+                                            {isSaving ? 'Synching...' : '달력에 반영'}
                                         </button>
                                     </div>
                                 </div>
@@ -486,7 +486,7 @@
                             </div>
                         )}
 
-                        {/* 3. 전담 시간 등록 (중첩 가능하도록 키 설계 변경) */}
+                        {/* 3. 전담 시간 등록 (전체 탭 추가) */}
                         {activeTab === 'config' && (
                             <div className="space-y-4 animate-in max-w-5xl mx-auto overflow-hidden">
                                 <div className="bg-indigo-600 p-6 rounded-[2.5rem] text-white flex flex-col lg:flex-row justify-between items-center gap-4 shadow-lg relative overflow-hidden">
@@ -499,28 +499,36 @@
                                             setIsSaving(true);
                                             const { db, appId, doc, setDoc, deleteDoc, Timestamp } = window.fb;
                                             try {
+                                                // 현재 편집 중인 과목의 데이터만 DB에 업데이트하고, 
+                                                // 해당 과목에서 삭제된 데이터만 DB에서 제거
                                                 const savePromises = Object.entries(editingSchedule).map(([key, data]) => 
                                                     setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'base', key), { ...data, updatedAt: Timestamp.now() })
                                                 );
+                                                
+                                                // baseSchedule 중 현재 선택된 과목(selectedSpec)에 해당하는데 editingSchedule 에는 없는 것을 찾아 삭제
                                                 const deletePromises = Object.keys(baseSchedule)
-                                                    .filter(key => !editingSchedule[key])
+                                                    .filter(key => key.endsWith(`-${selectedSpec}`) && !editingSchedule[key])
                                                     .map(key => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'base', key)));
+
                                                 await Promise.all([...savePromises, ...deletePromises]);
-                                                alert("클라우드 동기화 완료!"); setBaseSchedule(editingSchedule);
+                                                alert("달력에 반영되었습니다!"); setBaseSchedule(editingSchedule);
                                             } catch(e) { alert("저장 실패: " + e.message); }
                                             setIsSaving(false);
-                                        }} disabled={isSaving} className="px-6 py-3 bg-white text-indigo-600 rounded-2xl font-black text-xs shadow-xl transition-all btn-press flex items-center gap-2">
+                                        }} disabled={isSaving || selectedSpec === 'all'} className={`px-6 py-3 bg-white text-indigo-600 rounded-2xl font-black text-xs shadow-xl transition-all btn-press flex items-center gap-2 ${selectedSpec === 'all' ? 'opacity-50' : ''}`}>
                                             {isSaving ? <Loader2 size={14} className="animate-spin"/> : <SafeIcon name="Cloud" size={14}/>} Save & Overwrite to Cloud
                                         </button>
-                                        <div className="flex gap-1 p-1 bg-white/10 rounded-2xl border border-white/10">
+                                        <div className="flex gap-1 p-1 bg-white/10 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar max-w-[300px]">
+                                            <button onClick={() => setSelectedSpec('all')} className={`px-4 py-2 rounded-xl font-black transition-all whitespace-nowrap text-[11px] ${selectedSpec === 'all' ? 'bg-indigo-400 text-white shadow-md' : 'hover:bg-white/10'}`}>전체</button>
                                             {SPECIALISTS.filter(s=>s.id!=='external').map(s => (
                                                 <button key={s.id} onClick={() => setSelectedSpec(s.id)} className={`px-4 py-2 rounded-xl font-black transition-all whitespace-nowrap text-[11px] ${selectedSpec === s.id ? 'bg-white text-indigo-600 shadow-md' : 'hover:bg-white/10'}`}>{s.name}</button>
                                             ))}
                                         </div>
-                                        <div className="flex gap-2">
-                                            <input type="text" value={quickClass || ""} onChange={e => setQuickClass(e.target.value)} placeholder="반 (예: 1반)" className="w-24 p-2 rounded-xl bg-white/20 border-none text-white placeholder-white/30 font-black text-center text-xs outline-none focus:bg-white focus:text-slate-800 transition-all shadow-inner" />
-                                            <button onClick={() => setQuickClass(null)} className={`p-2 rounded-xl font-black transition-all text-xs flex items-center gap-1 ${quickClass === null ? 'bg-rose-500 text-white' : 'bg-rose-500/20 text-white border border-rose-400/20'}`}><SafeIcon name="Eraser" size={14}/></button>
-                                        </div>
+                                        {selectedSpec !== 'all' && (
+                                            <div className="flex gap-2">
+                                                <input type="text" value={quickClass || ""} onChange={e => setQuickClass(e.target.value)} placeholder="반 (예: 1반)" className="w-24 p-2 rounded-xl bg-white/20 border-none text-white placeholder-white/30 font-black text-center text-xs outline-none focus:bg-white focus:text-slate-800 transition-all shadow-inner" />
+                                                <button onClick={() => setQuickClass(null)} className={`p-2 rounded-xl font-black transition-all text-xs flex items-center gap-1 ${quickClass === null ? 'bg-rose-500 text-white' : 'bg-rose-500/20 text-white border border-rose-400/20'}`}><SafeIcon name="Eraser" size={14}/></button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 
@@ -530,37 +538,53 @@
                                         <button onClick={() => { if(confirm("편집창을 비울까요?")) setEditingSchedule({}); }} className="px-3 py-1.5 bg-rose-50 text-rose-400 text-[9px] font-black rounded-lg border border-rose-100 hover:bg-white transition-all shadow-sm">RESET</button>
                                     </div>
                                     <table className="w-full border-collapse config-table mt-12">
-                                        <thead><tr className="bg-slate-50 border-b"><th className="p-4 border-r text-[10px] font-black text-slate-300 uppercase tracking-widest">교시</th>{DAYS.map(d=><th key={d} className="p-4 border-r font-black text-slate-700 text-[14px] uppercase italic">{d}요일</th>)}</tr></thead>
+                                        <thead><tr className="bg-slate-50 border-b"><th className="p-4 border-r text-[10px] font-black text-slate-300 uppercase tracking-widest">교시</th>{DAYS.map(d=><th key={d} className="p-4 border-r font-black text-slate-700 text-[14px] uppercase italic tracking-tighter">{d}요일</th>)}</tr></thead>
                                         <tbody>
                                             {PERIODS.map(p=>(
                                                 <tr key={p} className="border-b last:border-0"><td className="p-4 bg-slate-50 border-r text-center font-black text-slate-200 text-5xl italic tracking-tighter leading-none">{p}</td>
                                                     {DAYS.map((_, dIdx)=>{
-                                                        const key = `${dIdx}-${p}-${selectedSpec}`;
-                                                        const item = editingSchedule[key];
-                                                        
-                                                        // 다른 과목의 같은 시간 데이터가 있는지 확인
-                                                        const others = Object.values(editingSchedule).filter(v => v.dayIdx === dIdx && v.period === p && v.type !== selectedSpec);
-                                                        
-                                                        return (
-                                                            <td key={dIdx} className="p-1 border-r last:border-0">
-                                                                <button onClick={() => {
-                                                                    if (quickClass === null) {
-                                                                        const newSched = {...editingSchedule}; delete newSched[key]; setEditingSchedule(newSched);
-                                                                    } else if (quickClass.trim() !== "") {
-                                                                        setEditingSchedule({...editingSchedule, [key]: { type: selectedSpec, classLabel: quickClass, dayIdx: dIdx, period: p }});
-                                                                    }
-                                                                }} className={`w-full p-2 border-2 border-dashed rounded-[2rem] transition-all flex flex-col items-center justify-center min-h-[90px] ${item ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner' : 'border-slate-50 text-slate-50'}`}>
-                                                                    {item ? (
-                                                                        <span className="text-[16px] tracking-tighter">{item.classLabel}</span>
-                                                                    ) : (
-                                                                        <div className="flex flex-col items-center opacity-40">
-                                                                            <SafeIcon name="Plus" size={24} />
-                                                                            {others.length > 0 && <span className="text-[8px] font-black mt-1 text-slate-300">({others.length}개 중첩됨)</span>}
-                                                                        </div>
-                                                                    )}
-                                                                </button>
-                                                            </td>
-                                                        );
+                                                        if (selectedSpec === 'all') {
+                                                            // '전체' 보기 모드
+                                                            const cellItems = Object.values(baseSchedule).filter(v => v.dayIdx === dIdx && v.period === p);
+                                                            return (
+                                                                <td key={dIdx} className="p-1 border-r last:border-0 align-top">
+                                                                    <div className="flex flex-col gap-1 min-h-[90px] p-1">
+                                                                        {cellItems.map((item, idx) => (
+                                                                            <div key={idx} className={`p-1 rounded-lg border text-[9px] font-black ${SPECIALISTS.find(s=>s.id===item.type)?.bg} ${SPECIALISTS.find(s=>s.id===item.type)?.text} ${SPECIALISTS.find(s=>s.id===item.type)?.border} shadow-sm truncate`}>
+                                                                                {SPECIALISTS.find(s=>s.id===item.type)?.name}: {item.classLabel}
+                                                                            </div>
+                                                                        ))}
+                                                                        {cellItems.length === 0 && <div className="h-full flex items-center justify-center text-slate-100 italic text-[9px]">Empty</div>}
+                                                                    </div>
+                                                                </td>
+                                                            );
+                                                        } else {
+                                                            // 개별 과목 편집 모드
+                                                            const key = `${dIdx}-${p}-${selectedSpec}`;
+                                                            const item = editingSchedule[key];
+                                                            const others = Object.values(editingSchedule).filter(v => v.dayIdx === dIdx && v.period === p && v.type !== selectedSpec);
+                                                            
+                                                            return (
+                                                                <td key={dIdx} className="p-1 border-r last:border-0">
+                                                                    <button onClick={() => {
+                                                                        if (quickClass === null) {
+                                                                            const newSched = {...editingSchedule}; delete newSched[key]; setEditingSchedule(newSched);
+                                                                        } else if (quickClass.trim() !== "") {
+                                                                            setEditingSchedule({...editingSchedule, [key]: { type: selectedSpec, classLabel: quickClass, dayIdx: dIdx, period: p }});
+                                                                        }
+                                                                    }} className={`w-full p-2 border-2 border-dashed rounded-[2rem] transition-all flex flex-col items-center justify-center min-h-[90px] ${item ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-inner' : 'border-slate-50 text-slate-50'}`}>
+                                                                        {item ? (
+                                                                            <span className="text-[16px] tracking-tighter leading-none">{item.classLabel}</span>
+                                                                        ) : (
+                                                                            <div className="flex flex-col items-center opacity-40">
+                                                                                <SafeIcon name="Plus" size={24} />
+                                                                                {others.length > 0 && <span className="text-[8px] font-black mt-1 text-slate-300">({others.length}개 중첩됨)</span>}
+                                                                            </div>
+                                                                        )}
+                                                                    </button>
+                                                                </td>
+                                                            );
+                                                        }
                                                     })}
                                                 </tr>
                                             ))}
@@ -575,15 +599,15 @@
                                             {SPECIALISTS.filter(s=>['english', 'science', 'pe'].includes(s.id)).map(s => (
                                                 <div key={s.id} className="space-y-1">
                                                     <label className="text-[9px] font-black text-slate-400 ml-1 leading-none uppercase tracking-tighter">{s.name}</label>
-                                                    <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value) || 0})} className="w-full p-2 rounded-xl bg-slate-50 border-none font-black text-indigo-600 text-[12px] text-center shadow-inner outline-none focus:ring-1 focus:ring-indigo-100" />
+                                                    <input type="number" value={targetHours[s.id]} onChange={e => setTargetHours({...targetHours, [s.id]: parseInt(e.target.value) || 0})} className="w-full p-1.5 rounded-xl bg-slate-50 border-none font-black text-indigo-600 text-[13px] text-center shadow-inner outline-none focus:ring-1 focus:ring-indigo-100" />
                                                 </div>
                                             ))}
                                         </div>
                                         <button onClick={() => { saveData('academic', 'targets', targetHours); alert("저장되었습니다."); }} className="w-full py-2 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] hover:bg-slate-200 transition-all uppercase italic tracking-widest">Update Targets</button>
                                     </div>
                                     <div className="flex-1 bg-slate-50 p-6 rounded-[2rem] w-full text-center">
-                                        <h4 className="text-[14px] font-black text-slate-800 mb-2 italic">동기화 도움말</h4>
-                                        <p className="text-[11px] text-slate-400 font-medium">과목별로 독립적인 저장소가 존재하여 중첩 등록이 가능합니다.<br/>시수 관리 달력에는 해당 교시에 등록된 반과 과목이 실시간으로 동기화됩니다.</p>
+                                        <h4 className="text-[14px] font-black text-slate-800 mb-2 italic tracking-tighter leading-none">동기화 도움말</h4>
+                                        <p className="text-[11px] text-slate-400 font-medium">전체 탭에서는 등록된 모든 전담 선생님의 수업을 한눈에 볼 수 있습니다.<br/>[Save] 버튼을 누르면 학사 일정 확인 탭의 달력에 즉시 반영됩니다.</p>
                                     </div>
                                 </div>
                             </div>
@@ -634,8 +658,8 @@
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
                             <div className="bg-white w-full max-w-xs rounded-[4rem] p-10 shadow-2xl space-y-8 animate-in zoom-in-95">
                                 <div className="text-center space-y-2">
-                                    <h2 className="text-2xl font-black text-slate-800 tracking-tighter italic leading-none uppercase">Status Check</h2>
-                                    <p className="text-[11px] text-slate-400 font-extrabold uppercase tracking-[0.2em] mt-2">{selectedCell?.replace(/-/g, '.')}</p>
+                                    <h2 className="text-2xl font-black text-slate-800 tracking-tighter italic leading-none uppercase tracking-tighter">Status Check</h2>
+                                    <p className="text-[11px] text-slate-400 font-extrabold uppercase tracking-[0.2em] mt-2 leading-none">{selectedCell?.replace(/-/g, '.')}</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-5">
                                     <button onClick={() => {
@@ -643,7 +667,7 @@
                                         const [d, p, c] = [`${parts[0]}-${parts[1]}-${parts[2]}`, parseInt(parts[3]), parts[4]];
                                         const data = getCellData(d, p, c);
                                         if(data) saveData('overrides', selectedCell, { ...data, status: 'held', classLabel: c }).then(() => setIsModalOpen(false));
-                                        else alert("등록된 수업이 아닙니다.");
+                                        else alert("등록된 수업이 없습니다.");
                                     }} className="p-10 bg-indigo-50 text-indigo-600 rounded-[3rem] border-2 border-indigo-100 font-black flex flex-col items-center gap-3 transition-all hover:bg-indigo-100 active:scale-95 shadow-lg shadow-indigo-100/50 btn-press"><SafeIcon name="CheckCircle2" size={40}/>완료</button>
                                     <button onClick={() => {
                                         const parts = selectedCell.split('-');
@@ -662,8 +686,8 @@
                     )}
 
                     <div className="fixed bottom-6 right-6 flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl z-40 border border-white/10 backdrop-blur-md opacity-80 scale-90">
-                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Cloud Sync V5.8</span>
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                        <span className="text-[10px] font-black tracking-widest uppercase leading-none italic">Live Sync Active</span>
                     </div>
                 </div>
             );
